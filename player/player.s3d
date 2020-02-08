@@ -1,0 +1,283 @@
+#include <weapons/weapon_class.s3d>
+
+#define SWAT_START_WALK 	16
+#define SWAT_END_WALK 		48
+#define SWAT_STEP			0.05
+#define SWAT_FRAME_STEP 	0.6
+#define SWAT_TURN_RATE 		0.04
+#define SWAT_BACKSTEP_SLOW  0.5
+#define SWAT_HITBOX_RADIUS	0.3
+#define CHANGE_WEAPON_COOLDOWN 	200
+
+class Player {
+	
+	// kinematics
+	var position;
+	var angle_h;
+	var angle_v;
+	var direction;
+	var run;
+	
+	// weaponry
+	var rocket_launcher;
+	var railgun;
+	var curr_weapon;
+	var curr_weapon_idx;
+	var change_weapon_cd;
+	
+	// animation
+	var current_frame;
+	
+	// graphics
+	var color;
+	var lower_mesh;
+	var upper_mesh;
+	var lower_obj;
+	var upper_obj;
+	var obj;
+	
+	// camera
+	var last_deltaX;
+	var last_deltaY;
+	
+	// collision detection
+	var hitbox_rad;
+	var level;
+	
+	init(pos, col, level);
+	getPosition();
+	getDirection();
+	setPosition(pos);
+	setRotation(angle);
+	shoot();
+	changeWeapon();
+	getRemainingShots();
+	getMagazineSize();
+	isReloading();
+	draw();
+	update();
+};
+
+
+/* Initialize the soldier */
+function Player::init(pos, col, lvl) 
+{
+	position = pos;
+	color = col;
+	level = lvl;
+
+	angle_h = 0;
+	angle_v = 0;
+	direction = [0,0,1];
+	run = 1;
+	hitbox_rad = SWAT_HITBOX_RADIUS;
+	last_deltaX = 0;
+	last_deltaY = 0;
+	
+	current_frame = SWAT_START_WALK;
+	
+	lower_mesh = CVmNewMesh("swat_lower.aam");
+	var sf = lower_mesh.normalize(1);
+	upper_mesh = CVmNewMesh("swat_upper.aam");
+	upper_mesh.scale(sf);
+	
+	lower_obj = CVmObj(lower_mesh);
+	upper_obj = CVmObj(upper_mesh);
+	
+	rocket_launcher = Weapon();
+	rocket_launcher.init(WEAP_ROCKET_TYPE, position, direction, sf);
+	railgun = Weapon();
+	railgun.init(WEAP_RAILGUN_TYPE, position, direction, sf);
+	curr_weapon = rocket_launcher;
+	curr_weapon_idx = WEAP_ROCKET_TYPE;
+	change_weapon_cd = 0;
+	
+	obj = CVmObj();
+	obj.addchild(upper_obj);
+	obj.addchild(lower_obj);
+	obj.addchild(curr_weapon.getObject());
+	obj.SetPosition(position);
+	
+	upper_obj.ModulateMaterials(color);
+}
+
+
+/* Get the player's current position */
+function player::getPosition()
+{
+	return position;
+}
+
+
+/* Get the player's current direction */
+function player::getDirection()
+{
+	return direction;
+}
+
+
+/* Translate the soldier */
+function player::setPosition(pos)
+{
+	position = pos;
+	obj.SetPosition(pos);
+}
+
+
+/* Rotate the soldier */
+function Player::setRotation(angle)
+{
+	obj.setRotation(angle*180.0/PI, 0, 1, 0);
+}
+
+
+/* Shoot */
+function Player::shoot()
+{
+	if (change_weapon_cd <= 0)
+		curr_weapon.fire();
+}
+
+
+/* Switch the weapon */
+function Player::changeWeapon()
+{
+	if (change_weapon_cd <= 0)
+		change_weapon_cd = CHANGE_WEAPON_COOLDOWN;
+	else
+		return;
+	
+	obj.RemoveChild(curr_weapon.getObject());
+	
+	if (curr_weapon_idx == WEAP_ROCKET_TYPE) {
+		curr_weapon = railgun;
+		curr_weapon_idx = WEAP_RAILGUN_TYPE;
+	} else {
+		curr_weapon = rocket_launcher;
+		curr_weapon_idx = WEAP_ROCKET_TYPE;
+	}
+	
+	obj.AddChild(curr_weapon.getObject());
+}
+
+
+/* Get the number of shots left in the magazine */
+function Player::getRemainingShots()
+{
+	return curr_weapon.getRemainingShots();
+}
+
+
+/* Get the total size of the rifle magazine */
+function Player::getMagazineSize()
+{
+	return curr_weapon.getMagazineSize();
+}
+
+
+/* Draw the soldier */
+function Player::draw()
+{
+	obj.Draw(VR_FRAMENUMBER, current_frame);
+	curr_weapon.drawEffects();
+}
+
+
+/* Return true if the player is reloading, false otehrwise */
+function Player::isReloading()
+{
+	return curr_weapon.isReloading();
+}
+
+
+/* Update the soldier state */
+function Player::update()
+{
+	var old_position = position;
+	var mouse_dx = Mouse.DeltaX;
+	var mouse_dy = Mouse.DeltaY;
+	
+	// Check if turning, and recompute angle accordingly
+	var mouse_x_perc = 2*(Mouse.X/640.0 - 0.5);
+	var mouse_y_perc = 2*(Mouse.Y/480.0 - 0.5);
+	
+	if (abs(mouse_x_perc) < 0.05)	// thresholding on mouse movements
+		mouse_x_perc = 0;
+	if (abs(mouse_y_perc) < 0.05)
+		mouse_y_perc = 0;
+		
+	if ((last_deltaX * mouse_x_perc > 0) || (mouse_dx * mouse_x_perc > 0))	// fast stop
+		angle_h -= SWAT_TURN_RATE * mouse_x_perc;
+	if ((last_deltaY * mouse_y_perc > 0) || (mouse_dy * mouse_y_perc > 0))
+		angle_v -= SWAT_TURN_RATE * mouse_y_perc;
+		
+	if (mouse_dx != 0) {
+		last_deltaX = mouse_dx;	
+	}
+	if (mouse_dy != 0) {
+		last_deltaY = mouse_dy;
+	}
+	
+	// Recompute orientation	
+	direction = [sin(angle_h), sin(angle_v), cos(angle_h)];
+	
+	// Check if running
+	if (keypressed(VK_SHIFT))
+		run = 2;
+	else
+		run = 1;
+	
+	// Check if moving forward/backwards, and recompute position accordingly
+	var forward_direction = [direction.x, 0, direction.z];
+	if (keypressed(VK_UP) || keypressed("w")) {
+		position += SWAT_STEP * forward_direction * run;
+		current_frame += SWAT_FRAME_STEP;
+		if (current_frame > SWAT_END_WALK)
+			current_frame = SWAT_START_WALK;
+	} else if (keypressed(VK_DOWN) || keypressed("s")) {
+		position -= SWAT_STEP * forward_direction * SWAT_BACKSTEP_SLOW;
+		current_frame -= SWAT_FRAME_STEP * SWAT_BACKSTEP_SLOW;
+		if (current_frame < SWAT_START_WALK)
+			current_frame = SWAT_END_WALK;
+	}
+	
+	// Check if sidestepping
+	var side_direction = [-direction.z, 0, direction.x]; 
+	if (keypressed(VK_RIGHT) || keypressed("d")) {
+		position += SWAT_STEP * side_direction;
+	}
+	if (keypressed(VK_LEFT) || keypressed("a")) {
+		position -= SWAT_STEP * side_direction;
+	}
+	
+	// Collision detection (revert movement if hitting a wall)
+	var coll_code = level.detectCollision(position, hitbox_rad);
+	if (coll_code & 4 != 0)
+		position.x = old_position.x;
+	if (coll_code & 2 != 0)
+		position.y = old_position.y;
+	if (coll_code & 1 != 0)
+		position.z = old_position.z;
+		
+	// Apply the movement changes	
+	setRotation(angle_h);
+	setPosition(position);
+		
+	// Check if the weapon is firing and update it
+	if (keypressed(VK_LBUTTON)) {
+		shoot();
+	}
+	curr_weapon.update(position, direction);
+	
+	// Check if reloading
+	if (keypressed("r")) {
+		curr_weapon.reload();
+	}
+	
+	// Check if switching weapon
+	if (keypressed("c")) {
+		changeWeapon();
+	}
+	if (change_weapon_cd > 0)
+		change_weapon_cd -= 1;
+}

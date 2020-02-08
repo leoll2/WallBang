@@ -1,0 +1,189 @@
+/* Include s3d symbols */
+#include <Script3d.h>
+#include <Camera.s3d.h>
+
+#include <map/level.s3d>
+#include <player/player.s3d>
+
+
+#define CAM_GLOBAL 		0
+#define CAM_FPV 		1
+
+/* Set global scene parameters */
+SET SCENE_FOV  = 60;
+SET SCENE_NEAR = 0.5;
+SET SCENE_FAR  = 1000;
+
+/* Camera globals */
+var camType;
+var globalCamDefaultPos = [2.0, 5.0, 30.0];
+
+/* Light globals */
+var Light0;
+var PosL = [16.0, 100.0, 16.0];	// default light position
+
+
+var mylevel;
+var myplayer;
+//var myplayer2;
+
+/* Function declarations */
+function initCamera(type, pos, dir);
+function updateCamera();
+function DrawGrid(col, size);
+
+
+/* onDownload() is performed at the beginning and downloads the files needed
+ * by the application.
+ */
+function OnDownload()
+{
+	FileDownload("resources.zip");
+}
+
+
+/* onInit() is called after onDownload() and performs the initialization routine */
+function OnInit(params)
+{
+	// Initialize light
+	Light0 = CVmLight();
+	Light0.SetPosition(PosL);
+	Light0.SetDiffuse(1, 1, 1);
+	Light0.Enable();	
+
+	mylevel = Level();
+	mylevel.init("level.txt");
+	
+	myplayer = Player();
+	myplayer.init([2,0,2], [0,1,0], mylevel);
+	
+	//myplayer2 = Player();
+	//myplayer2.init([2,0,6], [1,0,0], mylevel);
+	
+	// Initialize camera
+	//initCamera(CAM_GLOBAL, globalCamDefaultPos, [0,0,-1]);
+	initCamera(CAM_FPV, myplayer.getPosition() + [0,1.7,0], myplayer.getDirection());
+}
+
+
+/* onFrame() is called periodically (by default 100Hz) and manages the
+ * graphics. It is the only place where graphics commands take effect.
+ */
+function OnFrame()
+{	
+	/* Manage the camera */
+	updateCamera();
+
+	SceneBegin();
+
+	DrawGrid([0.5, 0.5, 0.5], 100);
+	
+	myplayer.update();
+	//myplayer2.update();
+	
+	mylevel.draw();
+	myplayer.draw();
+	//myplayer2.draw();
+	
+	// Show stats
+	ConsoleFont("Impact", 18);
+	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleText(0.8,0.9, "Ammo: " + str(myplayer.getRemainingShots()) + "/" + str(myplayer.getMagazineSize()));
+	
+	// Show notifications
+	if (myplayer.isReloading()) {
+		ConsoleFont("Impact", 18);
+		ConsoleColor(1, 0.6, 0.2);
+		ConsoleText(0.45,0.9, "RELOADING");
+	}
+	
+	// Draw scope
+	var scope1 = [0.5, 0.48, 0.5, 0.52];
+	var scope2 = [0.485, 0.5, 0.515, 0.5];
+	ConsoleColor(1,0,0);
+	ConsoleWidth(3);
+	ConsoleLines(scope1);
+	ConsoleLines(scope2);
+	
+	ShowCursor(false);
+	
+	SceneEnd();
+}
+
+
+/* DownloadReady() is called everytime a download in OnDownload() completes. */
+function DownloadReady(RequestID) {}
+
+
+/* onTimer() runs periodically (by default 100 Hz) and manages all
+ * the periodic routines that are not strictly graphical.
+ */
+function OnTimer() {}
+
+
+/* onEvent() is called whenever the application receives a message. */
+function OnEvent(eventID, wparam, lparam) {}
+
+
+/* onError() is called when the applications produces an error */
+function OnError() {}
+
+
+/* onExit() is called when the application is about to terminate. */
+function OnExit() {}
+
+
+/* Initialize the camera */
+function initCamera(type, pos, dir)
+{
+	camType = type;
+	CameraGetCurrent().SetPosition(pos);
+	CameraGetCurrent().SetDirection(dir);
+	
+	//ShowCursor(false);
+}
+
+
+/* Update the camera */
+function updateCamera()
+{	
+	if (camType == CAM_GLOBAL) {
+		CameraMoveMouse_MBL_LC();
+	}
+	
+	if (camType == CAM_FPV) {
+		CameraGetCurrent().SetPosition(myplayer.getPosition() + [0,1.7,0]);
+		CameraGetCurrent().SetDirection(myplayer.getDirection());
+		
+		//outputln(Mouse.DeltaX);
+		//SetCursorPos(0.9,0.9);
+	}
+}
+
+
+function DrawGrid(col, size)
+{
+	// Save current OpenGL state
+	glPushAttrib(GL_LIGHTING_BIT | GL_LINE_BIT | GL_CURRENT_BIT);
+	
+	glLineWidth(1);
+	glDisable(GL_LIGHTING);
+	glColor(col);
+	var max = size / 2.0;
+	var min = -max;	
+	var step = size / 10.0;
+	
+	glBegin(GL_LINES);
+		for (var i = min; i <= max; i += step)
+		{
+			glVertex(i, 0, max);
+			glVertex(i, 0, min);
+			
+			glVertex(max, 0, i);
+			glVertex(min, 0, i);
+		}
+	glEnd();
+	
+	// Restore previous OpenGL state
+	glPopAttrib();
+}

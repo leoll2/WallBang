@@ -1,0 +1,72 @@
+/* The class Bullet represents a projectile fired from a weapon */
+
+#define BULLET_LARGE_TYPE	0
+#define BULLET_SMALL_TYPE 	1
+#define BULLET_LARGE_SPEED 	0.2
+#define BULLET_SMALL_SPEED 	0.35
+#define BULLET_LARGE_SCALE	0.25
+#define BULLET_SMALL_SCALE 	0.1
+#define BULLET_LIFE 		100
+
+
+class Bullet 
+{	
+	// kinematics
+	var position;
+	var direction;
+	var speed;
+	var life;
+	
+	// graphics
+	var mesh;
+	var obj;
+	
+	init(type, pos, dir);
+	update();
+	draw();
+};
+
+
+/* Initialize a Bullet given the player position and direction */
+function Bullet::init(type, pos, dir)
+{
+	position = pos + [0,1,0];	// offset for spawning outside the player body
+	direction = dir;
+	
+	if (type == BULLET_LARGE_TYPE) {
+		speed = BULLET_LARGE_SPEED;
+		life = BULLET_LIFE;
+		mesh = CVMNewMesh(VRP_SPHERE);
+		mesh.Scale(BULLET_LARGE_SCALE);
+	} else {
+		speed = BULLET_SMALL_SPEED;
+		life = BULLET_LIFE;
+		mesh = CVMNewMesh(VRP_SPHERE);
+		mesh.Scale(BULLET_SMALL_SCALE);
+	}
+	
+	obj = CVmObj(mesh);
+	obj.SetPosition(position);
+}
+
+
+/* Update the position of the bullet */
+function Bullet::update()
+{
+	// projectile decay; if over, notify the weapon
+	life -= 1;
+	if (life <= 0)
+		return 0;
+		
+	// update the position
+	position += direction * speed;
+	obj.SetPosition(position);
+	return life;
+}
+
+
+/* Draw the bullet */
+function Bullet::draw()
+{
+	obj.Draw();
+}

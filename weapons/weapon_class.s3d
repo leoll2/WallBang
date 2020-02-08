@@ -1,0 +1,204 @@
+/* The class Weapon represents a weapon (e.g. a gun)
+ * that can be held by the player.
+ */
+
+#include <weapons/bullet_class.s3d>
+
+#define WEAP_ROCKET_TYPE	0
+#define WEAP_RAILGUN_TYPE 	1
+#define ROCKET_BULLETS 		3
+#define RAILGUN_BULLETS 	20
+#define TRIGGER_COOLDOWN 	25
+#define RELOAD_COOLDOWN 	200
+
+
+class Weapon 
+{	
+	var type;
+	
+	// kinematics
+	var position;
+	var direction;
+	
+	// behavior
+	var bullets;
+	var magazine_size;
+	var bullets_left;
+	var n_fired;
+	var trigger_cd;
+	var reload_cd;
+	
+	// graphics
+	var mesh;
+	var obj;
+	
+	// audio
+	var shoot_fx;
+	
+	init(type, pos, dir, sf);
+	getObject();
+	drawEffects();
+	fire();
+	reload();
+	getRemainingShots();
+	getMagazineSize();
+	isReloading();
+	update(pos, dir);
+};
+
+
+/* Initialize the weapon */
+function Weapon::init(tp, pos, dir, sf)
+{
+	type = tp;
+	position = pos;
+	direction = dir;
+	
+	if (type == WEAP_ROCKET_TYPE)
+		magazine_size = ROCKET_BULLETS;
+	else
+		magazine_size = RAILGUN_BULLETS;
+	
+	bullets = Array(magazine_size);
+	for (var i=0; i < magazine_size; i++)
+		bullets[i] = null;
+	bullets_left = magazine_size;
+	n_fired = 0;
+	trigger_cd = 0;
+	reload_cd = 0;
+	
+	if (type == WEAP_ROCKET_TYPE)
+		mesh = CVmNewMesh("rocketl.AAM");
+	else
+		mesh = CVmNewMesh("railgun.AAM");
+	mesh.scale(sf);
+	
+	obj = CVmObj(mesh);
+	
+	shoot_fx = CVmVRAWAV("shoot.wav");
+}
+
+
+/* Return a reference to the object */
+function Weapon::getObject()
+{
+	return obj;
+}
+
+
+/* Draw entities and effects related to the weapon,
+ * including the bullets
+ */
+function Weapon::drawEffects()
+{
+	if (n_fired > 0) {
+		for (var i=0; i < magazine_size; i++)
+			if (bullets[i] != null)
+				bullets[i].draw();
+	}
+}
+
+
+/* Fire the weapon */
+function Weapon::fire()
+{
+	var bullet_type;
+	var free_idx = -1;
+	
+	// Do nothing if already fired all the bullets
+	if (n_fired >= magazine_size)
+		return;
+		
+	// Do nothing if the magazine is empty
+	if (bullets_left <= 0)
+		return;
+	
+	// Do nothing if the trigger is in cooldown
+	if (trigger_cd > 0)
+		return;
+		
+	// Do nothing if already reloading
+	if (isReloading())
+		return;
+
+	// Find the index of a free bullet
+	for (var i=0; i < magazine_size; i++) {
+		if (bullets[i] == null) {
+			free_idx = i;
+			break;
+		}
+	}
+	
+	if (type == WEAP_ROCKET_TYPE)
+		bullet_type = BULLET_LARGE_TYPE;
+	else
+		bullet_type = BULLET_SMALL_TYPE;
+	bullets[free_idx] = Bullet();
+	bullets[free_idx].init(bullet_type, position, direction);
+	shoot_fx.play();
+	n_fired += 1;
+	bullets_left -= 1;
+	trigger_cd = TRIGGER_COOLDOWN;
+}
+
+
+/* Reload the gun */
+function Weapon::reload()
+{
+	if (bullets_left == magazine_size)
+		return;
+
+	if (! isReloading())
+		reload_cd = RELOAD_COOLDOWN;
+}
+
+
+/* Get the number of remaining shots */
+function Weapon::getRemainingShots()
+{
+	return bullets_left;
+}
+
+
+/* Get the size of the magazine (i.e. fully reloaded) */
+function Weapon::getMagazineSize()
+{
+	return magazine_size;
+}
+
+
+/* Return true if the player is reloading, false otehrwise */
+function Weapon::isReloading()
+{
+	return (reload_cd > 0);
+}
+
+
+/* Update the state of the weapon */
+function Weapon::update(pos, dir)
+{
+	position = pos;
+	direction = dir;
+	
+	if (n_fired > 0) {
+		for (var i=0; i < magazine_size; i++) {
+			if (bullets[i] != null) {
+				var b_life_res = bullets[i].update();
+				if (b_life_res == 0) {
+					// projectile expired
+					bullets[i] = null;
+					n_fired -= 1;
+				}	
+			}
+		}
+	}
+
+	if (trigger_cd > 0)
+		trigger_cd -= 1;
+		
+	if (reload_cd > 0) {
+		reload_cd -= 1;
+		if (reload_cd == 0)
+			bullets_left = magazine_size;
+	}
+}
