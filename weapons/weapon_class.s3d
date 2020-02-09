@@ -34,8 +34,13 @@ class Weapon
 	
 	// audio
 	var shoot_fx;
+	var reload_fx;
+	var jam_fx;
 	
-	init(type, pos, dir, sf);
+	// collision detection
+	var lev;
+	
+	init(type, pos, dir, sf, lvl);
 	getObject();
 	drawEffects();
 	fire();
@@ -43,16 +48,18 @@ class Weapon
 	getRemainingShots();
 	getMagazineSize();
 	isReloading();
+	removeBullet(idx);
 	update(pos, dir);
 };
 
 
 /* Initialize the weapon */
-function Weapon::init(tp, pos, dir, sf)
+function Weapon::init(tp, pos, dir, sf, lvl)
 {
 	type = tp;
 	position = pos;
 	direction = dir;
+	lev = lvl;
 	
 	if (type == WEAP_ROCKET_TYPE)
 		magazine_size = ROCKET_BULLETS;
@@ -67,15 +74,19 @@ function Weapon::init(tp, pos, dir, sf)
 	trigger_cd = 0;
 	reload_cd = 0;
 	
-	if (type == WEAP_ROCKET_TYPE)
+	if (type == WEAP_ROCKET_TYPE) {
 		mesh = CVmNewMesh("rocketl.AAM");
-	else
+		shoot_fx = CVmVRAWAV("rocket_shoot.wav");
+	} else {
 		mesh = CVmNewMesh("railgun.AAM");
+		shoot_fx = CVmVRAWAV("rifle_shoot.wav");
+	}
 	mesh.scale(sf);
 	
 	obj = CVmObj(mesh);
 	
-	shoot_fx = CVmVRAWAV("shoot.wav");
+	jam_fx = CVmVRAWAV("jam.wav");
+	reload_fx = CVmVRAWAV("reload_rifle.wav");
 }
 
 
@@ -105,12 +116,14 @@ function Weapon::fire()
 	var bullet_type;
 	var free_idx = -1;
 	
+	// Do nothing if the magazine is empty
+	if (bullets_left <= 0) {
+		jam_fx.play();
+		return;	
+	}
+	
 	// Do nothing if already fired all the bullets
 	if (n_fired >= magazine_size)
-		return;
-		
-	// Do nothing if the magazine is empty
-	if (bullets_left <= 0)
 		return;
 	
 	// Do nothing if the trigger is in cooldown
@@ -134,7 +147,7 @@ function Weapon::fire()
 	else
 		bullet_type = BULLET_SMALL_TYPE;
 	bullets[free_idx] = Bullet();
-	bullets[free_idx].init(bullet_type, position, direction);
+	bullets[free_idx].init(bullet_type, position, direction, lev);
 	shoot_fx.play();
 	n_fired += 1;
 	bullets_left -= 1;
@@ -148,8 +161,10 @@ function Weapon::reload()
 	if (bullets_left == magazine_size)
 		return;
 
-	if (! isReloading())
+	if (! isReloading()) {
 		reload_cd = RELOAD_COOLDOWN;
+		reload_fx.play();	
+	}
 }
 
 
@@ -174,6 +189,14 @@ function Weapon::isReloading()
 }
 
 
+/* Remove a bullet, either because expired or hit a wall or enemy */
+function Weapon::removeBullet(idx)
+{
+	bullets[idx] = null;
+	n_fired -= 1;
+}
+
+
 /* Update the state of the weapon */
 function Weapon::update(pos, dir)
 {
@@ -186,8 +209,7 @@ function Weapon::update(pos, dir)
 				var b_life_res = bullets[i].update();
 				if (b_life_res == 0) {
 					// projectile expired
-					bullets[i] = null;
-					n_fired -= 1;
+					removeBullet(i);
 				}	
 			}
 		}

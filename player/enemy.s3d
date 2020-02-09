@@ -1,0 +1,67 @@
+class Enemy {
+	
+	var active;
+	var pos;
+	var angle;
+	var score;
+	var level;
+	var bullets;
+	
+	// graphics
+	var lower_mesh;
+	var upper_mesh;
+	var lower_obj;
+	var upper_obj;
+	var obj;
+	
+	init(act, p, a, sc, lvl);
+	draw();
+	IncrementScore();
+	tryIncrementScore(new_score);
+};
+
+
+function Enemy::init(act, p, a, s, lvl)
+{
+	active = act;
+	pos = p;
+	angle = a;
+	score = s;
+	level = lvl;
+	
+	bullets = array(N_BULLETS_PLAYER);
+	for (var i=0; i<N_BULLETS_PLAYER; i++)
+		bullets[i] = null;
+		
+	lower_mesh = CVmNewMesh("swat_lower.aam");
+	var sf = lower_mesh.normalize(1);
+	upper_mesh = CVmNewMesh("swat_upper.aam");
+	upper_mesh.scale(sf);
+	
+	lower_obj = CVmObj(lower_mesh);
+	upper_obj = CVmObj(upper_mesh);
+	obj = CVmObj();
+	obj.addchild(upper_obj);
+	obj.addchild(lower_obj);
+	// TODO add weapon mesh
+	obj.SetPosition(pos);
+}
+
+
+function Enemy::draw()
+{
+	obj.Draw(VR_FRAMENUMBER, 0);
+}
+
+
+function Enemy::incrementScore()
+{
+	score += 1;
+}
+
+
+function Enemy::tryIncrementScore(new_score)
+{
+	if (new_score > score)
+		score = new_score;
+}

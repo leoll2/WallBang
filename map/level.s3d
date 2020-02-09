@@ -12,10 +12,14 @@ class Level
 	var floor_texture;
 	
 	// topology
+	var n_rows;
+	var n_cols;
 	var level_matrix;
 	
 	init(level_textfile);
 	detectCollision(pos, r);
+	getRandomFloorPosition();
+	getNonWallDirection(pos);
 	draw();
 };
 
@@ -25,31 +29,36 @@ function Level::init(level_textfile)
 {
 	// Load topology from a file
 	var f = LoadFile(level_textfile);
-	var num_rows = len(f);
-	var num_columns = len(f[0]);
-	trace(num_rows, num_columns);
+	n_rows = len(f);
+	n_cols = len(f[0]);
+	trace(n_rows, n_cols);
 	
 	// Configure the walls visual parameters (e.g. textures)
-	wall_texture = CVmTexture("Mattoni03.png");
+	wall_texture = CVmTexture("concrete_wall.jpg");
 	wall_material = CVmMaterial();
 	wall_material.SetTexture(wall_texture);
 	wall_material.ChangeTextureParams(VR_V_TILING, 3);
-	wall_mesh = CVmNewMesh(VRP_BOX);
-	wall_mesh.SetMaterial(wall_material);
-	wall_mesh.Scale(1,3,1);
+	
 	
 	// Create the walls of the maze
-	level_matrix = array(num_rows);
+	level_matrix = array(n_rows);
 	wall_obj_array = array(0);
-	for (var i=0; i<num_rows; i++) {
-		level_matrix[i] = array(num_columns);
-		for (var j=0; j<num_columns; j++) {
-			if (f[i][j] == "*") {
-				// Create a wall
+	for (var i=0; i<n_rows; i++) {
+		level_matrix[i] = array(n_cols);
+		for (var j=0; j<n_cols; j++) {
+			if (f[i][j] != " ") {
+				// Get wall height
+				var wall_h = val(f[i][j]);
+				// Create mesh
+				wall_mesh = CVmNewMesh(VRP_BOX);
+				wall_mesh.SetMaterial(wall_material);
+				wall_mesh.Scale(1, wall_h, 1);
+				// Create object
 				var new_wall = CVmObj(wall_mesh);
 				new_wall.SetPosition(j,0,i);
+				// Add the wall entity to the map
 				aadd(wall_obj_array, new_wall);
-				level_matrix[i][j] = 1;	
+				level_matrix[i][j] = wall_h;	
 			} else {
 				level_matrix[i][j] = 0;
 			}
@@ -57,42 +66,107 @@ function Level::init(level_textfile)
 	}
 	
 	// Configure the floor visual parameters
-	floor_texture = CVMtexture("MARMO.png");
+	floor_texture = CVMtexture("dirt.jpg");
 	floor_material = CVmMaterial();
 	floor_material.SetTexture(floor_texture);
 	floor_material.ChangeTextureParams(VR_U_TILING, 4);
 	floor_material.ChangeTextureParams(VR_V_TILING, 4);
 	floor_mesh = CVmNewMesh(VRP_BOX);
-	floor_mesh.scale(num_columns, 1, num_rows);
+	floor_mesh.scale(n_cols, 1, n_rows);
 	floor_mesh.translate(0,-1,0);
 	floor_mesh.SetMaterial(floor_material);
 }
 
 
-/* Check if a point is inside a wall of the level map */
+/* Check if a point is inside a wall of the level map 
+ * Each bit in the return code has a specific meaning:
+ * 0 (1) -> collision with an horizontal surface
+ * 1 (2) -> collision with a wall parallel to Z
+ * 2 (4) -> collision with a wall parallel to X
+ * 3 (8) -> collision with a corner of walls parallel to X and Y, respectively
+ * 4 (16)-> out of map
+ * */
 function Level::detectCollision(pos, r)
 {
 	var coll_code = 0;
 	var i = int(pos.z);
 	var j = int(pos.x);
 	
-	// Check if colliding with the walls
-	//if (level_matrix[i][j] == 0)
-	//	return coll_code;
+	// Check if out-of-map
+	if ((i < 0) || (i > n_rows-1) || (j < 0) || (j > n_cols-1)) {
+		return 16;
+	}
 	
-	// If colliding, detect where
+	// Set of points to test (i.e. the vertices of a square enclosing this object)
 	var i_low = int(pos.z - r);
 	var i_high = int(pos.z + r); 
 	var j_low = int(pos.x - r);
 	var j_high = int(pos.x + r);
-	if ((level_matrix[i][j_low] != 0) || (level_matrix[i][j_high] != 0))
-		coll_code |= 4;
-	//if <TODO: colliding in Y>
-	//	coll_code |= 2;
-	if ((level_matrix[i_low][j] != 0) || (level_matrix[i_high][j] != 0))
+	
+	if (i_low < 0) i_low = 0;
+	if (i_high > n_rows-1) i_high = n_rows-1;
+	if (j_low < 0) j_low = 0;
+	if (j_high > n_cols-1) j_high = n_cols-1;
+	
+	var hA = level_matrix[i_low][j_low];
+	var hB = level_matrix[i_low][j_high];
+	var hC = level_matrix[i_high][j_high];
+	var hD = level_matrix[i_high][j_low];
+	
+	// If colliding, detect where
+	// vertical
+	if (pos.y >= level_matrix[i][j]) {
+		return coll_code;
+	} else {
 		coll_code |= 1;
+	}
+	// horizontal
+	if ((hA != 0 && hD != 0) ||	(hB != 0 && hC != 0)) {
+		coll_code |= 4;
+	}
+	if ((hA != 0 && hB != 0) || (hC != 0 && hD != 0)) {
+		coll_code |= 2;	
+	}
+	// corner
+	if ((coll_code & 6 == 0) && (hA != 0 || hB != 0 || hC !=0 || hD != 0)) {
+		//outputln("Corner collision!");
+		if (level_matrix[i][j] > pos.y)
+			coll_code |= 8;
+	}
 	
 	return coll_code;
+}
+
+
+/* Return a random position at floor level and not inside walls */
+function Level::getRandomFloorPosition()
+{
+	var i, j;
+	do {
+		i = Rand(n_rows-1);
+		j = Rand(n_cols-1);
+	} while (level_matrix[i][j] != 0);
+	return [i+0.5, 0, j+0.5];
+}
+
+
+/* Given a position, find a direction that is not directly facing a wall */
+function Level::getNonWallDirection(pos)
+{
+	var i = int(pos.z);
+	var j = int(pos.x);
+	
+	if ((i > 0) && (level_matrix[i-1][j] == 0))
+		return [-1, 0, 0];
+	else if ((i < n_rows-1) && (level_matrix[i+1][j] == 0))
+		return [1, 0, 0];
+	else if ((j > 0) && (level_matrix[i][j-1] == 0))
+		return [0, 0, -1];
+	else if ((j < n_cols-1) && (level_matrix[i][j+1] == 0))
+		return [0, 0, 1];
+	
+	outputln("Warn: spawn point is entirely surrounded by walls");
+	return [0, 0, 1];
 }
 
 

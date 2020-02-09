@@ -3,34 +3,76 @@
 #include <Camera.s3d.h>
 
 #include <map/level.s3d>
+#include <network/network.s3d>
 #include <player/player.s3d>
+#include <player/enemy.s3d>
 
+
+#define MY_PLAYER_ID 	12
 
 #define CAM_GLOBAL 		0
 #define CAM_FPV 		1
 
-/* Set global scene parameters */
+#define N_PLAYERS	 	8
+#define N_ENEMIES 		(N_PLAYERS-1)
+
+
+
+// Global scene parameters
 SET SCENE_FOV  = 60;
 SET SCENE_NEAR = 0.5;
-SET SCENE_FAR  = 1000;
+SET SCENE_FAR  = 200;
 
-/* Camera globals */
+// Camera globals
 var camType;
 var globalCamDefaultPos = [2.0, 5.0, 30.0];
 
-/* Light globals */
+// Light globals
 var Light0;
 var PosL = [16.0, 100.0, 16.0];	// default light position
 
+// Level globals
+var myLevel;
 
-var mylevel;
-var myplayer;
-//var myplayer2;
+// Players globals
+var myPlayer;
+var enemies = array(N_PLAYERS);
 
-/* Function declarations */
+// Audio
+var start_fx;
+
+// Network
+var myNetwork;
+
+// Function declarations
 function initCamera(type, pos, dir);
 function updateCamera();
 function DrawGrid(col, size);
+
+
+/* Draw the HUD and secondary information */
+function drawHUD()
+{
+	// Show stats
+	ConsoleFont("Impact", 18);
+	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleText(0.8,0.9, "Ammo: " + str(myPlayer.getRemainingShots()) + "/" + str(myPlayer.getMagazineSize()));
+	
+	// Show notifications
+	if (myPlayer.isReloading()) {
+		ConsoleFont("Impact", 18);
+		ConsoleColor(1, 0.6, 0.2);
+		ConsoleText(0.45,0.9, "RELOADING");
+	}
+	
+	// Draw scope
+	var scope1 = [0.5, 0.48, 0.5, 0.52];
+	var scope2 = [0.485, 0.5, 0.515, 0.5];
+	ConsoleColor(1,0,0);
+	ConsoleWidth(3);
+	ConsoleLines(scope1);
+	ConsoleLines(scope2);
+}
 
 
 /* onDownload() is performed at the beginning and downloads the files needed
@@ -45,24 +87,40 @@ function OnDownload()
 /* onInit() is called after onDownload() and performs the initialization routine */
 function OnInit(params)
 {
+	outputln("Initializing the game...");
+	
 	// Initialize light
 	Light0 = CVmLight();
 	Light0.SetPosition(PosL);
 	Light0.SetDiffuse(1, 1, 1);
-	Light0.Enable();	
+	Light0.Enable();
 
-	mylevel = Level();
-	mylevel.init("level.txt");
+	myLevel = Level();
+	myLevel.init("level_3D.txt");
 	
-	myplayer = Player();
-	myplayer.init([2,0,2], [0,1,0], mylevel);
+	myPlayer = Player();
+	var spawn_pos = myLevel.getRandomFloorPosition();
+	var spawn_dir = myLevel.getNonWallDirection(spawn_pos);
+	myPlayer.init(spawn_pos, spawn_dir, [0,1,0], myLevel);
 	
-	//myplayer2 = Player();
-	//myplayer2.init([2,0,6], [1,0,0], mylevel);
+	for (var i=0; i<N_PLAYERS; i++) {
+		enemies[i] = Enemy();
+		enemies[i].init(false, [0,0,0], 0, 0, myLevel);
+	}
+	
+	myNetwork = NetworkManager();
+	myNetwork.init(MY_PLAYER_ID);
 	
 	// Initialize camera
 	//initCamera(CAM_GLOBAL, globalCamDefaultPos, [0,0,-1]);
-	initCamera(CAM_FPV, myplayer.getPosition() + [0,1.7,0], myplayer.getDirection());
+	initCamera(CAM_FPV, myPlayer.getPosition() + [0,1.7,0], myPlayer.getDirection());
+	
+	// Set the mouse cursor at the center
+	SetCursorPos(0.5, 0.5);
+	
+	start_fx = CVmVRAWAV("start.wav");
+	start_fx.play();
+	outputln("Ready to play!");
 }
 
 
@@ -71,41 +129,36 @@ function OnInit(params)
  */
 function OnFrame()
 {	
-	/* Manage the camera */
+	// Check if should quit the application
+	if (keypressed(VK_ESCAPE)) {
+		CVmWebBrowser().Quit();
+	}
+	
+	// Update the camera
 	updateCamera();
 
 	SceneBegin();
 
 	DrawGrid([0.5, 0.5, 0.5], 100);
 	
-	myplayer.update();
-	//myplayer2.update();
-	
-	mylevel.draw();
-	myplayer.draw();
-	//myplayer2.draw();
-	
-	// Show stats
-	ConsoleFont("Impact", 18);
-	ConsoleColor(0.4, 0.6, 1.0);
-	ConsoleText(0.8,0.9, "Ammo: " + str(myplayer.getRemainingShots()) + "/" + str(myplayer.getMagazineSize()));
-	
-	// Show notifications
-	if (myplayer.isReloading()) {
-		ConsoleFont("Impact", 18);
-		ConsoleColor(1, 0.6, 0.2);
-		ConsoleText(0.45,0.9, "RELOADING");
+	myPlayer.update();
+	if (myPlayer.hasMoved()) {
+		var pos_pdu = myNetwork.craftPlayerPosPDU(myPlayer.position, myPlayer.angle_h);
+		myNetwork.sendPDU(pos_pdu);
 	}
 	
-	// Draw scope
-	var scope1 = [0.5, 0.48, 0.5, 0.52];
-	var scope2 = [0.485, 0.5, 0.515, 0.5];
-	ConsoleColor(1,0,0);
-	ConsoleWidth(3);
-	ConsoleLines(scope1);
-	ConsoleLines(scope2);
+	// Draw the map and the active players
+	myLevel.draw();
+	myPlayer.draw();
+	for (var i=0; i<N_PLAYERS; i++) {
+		if (enemies[i].active)
+			enemies[i].draw();
+	}
+	
+	drawHUD();
 	
 	ShowCursor(false);
+	SetCursorPos(0.5, 0.5);
 	
 	SceneEnd();
 }
@@ -118,7 +171,60 @@ function DownloadReady(RequestID) {}
 /* onTimer() runs periodically (by default 100 Hz) and manages all
  * the periodic routines that are not strictly graphical.
  */
-function OnTimer() {}
+function OnTimer() 
+{
+	var pdu;
+	
+	// Try to acquire a PDU 
+	pdu = myNetwork.receivePDU();
+	
+	// Handle the PDU, if any
+	if (pdu != null) {
+
+		// Position update:
+		// [0]-typePDU, [1]-sender, [2,3,4]-posXYZ, [5]-angle
+		if (pdu[0] == POSITION_PDU) {
+			var player_id = pdu[1];
+			enemies[player_id].active = true;
+			enemies[player_id].pos = [pdu[2], pdu[3], pdu[4]];
+			enemies[player_id].angle = pdu[5];	
+		}
+		
+		// Bullet update:
+		// [0]-typePDU, [1]-sender, [2]-weapon, [3]-bull_idx, [4,5,6]-posXYZ, [7,8,9]-dirXYZ, [10]-life
+		if (pdu[0] == BULLET_PDU) {
+			var player_id = pdu[1];
+			enemies[player_id].bullets[pdu[2]*ROCKET_BULLETS + pdu[3]].position = [pdu[4], pdu[5], pdu[6]];
+			enemies[player_id].bullets[pdu[2]*ROCKET_BULLETS + pdu[3]].direction = [pdu[7], pdu[8], pdu[9]];
+			enemies[player_id].bullets[pdu[2]*ROCKET_BULLETS + pdu[3]].life = pdu[10];
+		}
+		
+		// Bullet hit notification:
+		// [0]-typePDU, [1]-player_hit, [2]-hitter, [3]-weapon, [4]-bull_idx
+		if (pdu[0] == HIT_PDU) {
+			var player_hit_id = pdu[1];
+			var hitter_id = pdu[2];
+			var weap = pdu[3];
+			var bull_idx = pdu[4];
+			if (hitter_id == MY_PLAYER_ID) {
+				myPlayer.handleHitTarget(weap, bull_idx);
+				myPlayer.incrementScore();	// TODo mettere nellla prec
+			} else {
+				enemies[hitter_id].incrementScore();
+				enemies[hitter_id].bullets[weap*ROCKET_BULLETS + bull_idx] = null;
+			}
+		}
+		
+		// Score update:
+		// [0]-typePDU, [1]-sender, [2..N_PLAYERS+1]-score
+		if(pdu[0] == SCORE_PDU)	{
+			var player_id = pdu[1];
+			for (var i=0; i<N_PLAYERS; i++){
+				enemies[i].tryIncrementScore(pdu[2+i]);
+			}
+		}
+	}
+}
 
 
 /* onEvent() is called whenever the application receives a message. */
@@ -139,8 +245,6 @@ function initCamera(type, pos, dir)
 	camType = type;
 	CameraGetCurrent().SetPosition(pos);
 	CameraGetCurrent().SetDirection(dir);
-	
-	//ShowCursor(false);
 }
 
 
@@ -152,11 +256,8 @@ function updateCamera()
 	}
 	
 	if (camType == CAM_FPV) {
-		CameraGetCurrent().SetPosition(myplayer.getPosition() + [0,1.7,0]);
-		CameraGetCurrent().SetDirection(myplayer.getDirection());
-		
-		//outputln(Mouse.DeltaX);
-		//SetCursorPos(0.9,0.9);
+		CameraGetCurrent().SetPosition(myPlayer.getPosition() + [0,1.7,0]);
+		CameraGetCurrent().SetDirection(myPlayer.getDirection());
 	}
 }
 

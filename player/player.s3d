@@ -4,10 +4,12 @@
 #define SWAT_END_WALK 		48
 #define SWAT_STEP			0.05
 #define SWAT_FRAME_STEP 	0.6
-#define SWAT_TURN_RATE 		0.04
-#define SWAT_BACKSTEP_SLOW  0.5
+#define SWAT_TURN_RATE 		0.01
+#define SWAT_BACKSTEP_SLOW  0.8
+#define SWAT_JUMP_SPEED     1.0
 #define SWAT_HITBOX_RADIUS	0.3
-#define CHANGE_WEAPON_COOLDOWN 	200
+#define CHANGE_WEAPON_COOLDOWN 	100
+#define N_BULLETS_PLAYER	(ROCKET_BULLETS + RAILGUN_BULLETS)
 
 class Player {
 	
@@ -16,7 +18,9 @@ class Player {
 	var angle_h;
 	var angle_v;
 	var direction;
+	var v_y;
 	var run;
+	var has_moved;
 	
 	// weaponry
 	var rocket_launcher;
@@ -36,6 +40,10 @@ class Player {
 	var upper_obj;
 	var obj;
 	
+	// audio
+	var step_fx;
+	var jump_fx;
+	
 	// camera
 	var last_deltaX;
 	var last_deltaY;
@@ -44,7 +52,10 @@ class Player {
 	var hitbox_rad;
 	var level;
 	
-	init(pos, col, level);
+	// game
+	var score;
+	
+	init(pos, dir, col, level);
 	getPosition();
 	getDirection();
 	setPosition(pos);
@@ -53,23 +64,28 @@ class Player {
 	changeWeapon();
 	getRemainingShots();
 	getMagazineSize();
+	hasMoved();
 	isReloading();
+	incrementScore();
+	handleHitTarget(weap, bull_idx);
 	draw();
 	update();
 };
 
 
 /* Initialize the soldier */
-function Player::init(pos, col, lvl) 
+function Player::init(pos, dir, col, lvl) 
 {
 	position = pos;
+	direction = dir;
 	color = col;
 	level = lvl;
 
 	angle_h = 0;
 	angle_v = 0;
-	direction = [0,0,1];
+	v_y = 0;
 	run = 1;
+	has_moved = false;
 	hitbox_rad = SWAT_HITBOX_RADIUS;
 	last_deltaX = 0;
 	last_deltaY = 0;
@@ -85,12 +101,14 @@ function Player::init(pos, col, lvl)
 	upper_obj = CVmObj(upper_mesh);
 	
 	rocket_launcher = Weapon();
-	rocket_launcher.init(WEAP_ROCKET_TYPE, position, direction, sf);
+	rocket_launcher.init(WEAP_ROCKET_TYPE, position, direction, sf, level);
 	railgun = Weapon();
-	railgun.init(WEAP_RAILGUN_TYPE, position, direction, sf);
+	railgun.init(WEAP_RAILGUN_TYPE, position, direction, sf, level);
 	curr_weapon = rocket_launcher;
 	curr_weapon_idx = WEAP_ROCKET_TYPE;
 	change_weapon_cd = 0;
+	
+	score = 0;
 	
 	obj = CVmObj();
 	obj.addchild(upper_obj);
@@ -99,6 +117,9 @@ function Player::init(pos, col, lvl)
 	obj.SetPosition(position);
 	
 	upper_obj.ModulateMaterials(color);
+	
+	step_fx = CVmVRAWAV("step.wav");
+	jump_fx = CVmVRAWAV("jump.wav");
 }
 
 
@@ -183,10 +204,40 @@ function Player::draw()
 }
 
 
+/* Return true if the player has moved (or attempted to do so)
+ * during the last update cycle
+ */
+ function Player::hasMoved()
+ {
+ 	return has_moved;
+ }
+
+
 /* Return true if the player is reloading, false otehrwise */
 function Player::isReloading()
 {
 	return curr_weapon.isReloading();
+}
+
+
+/* Increment the score */
+function Player::incrementScore()
+{
+	score += 1;
+}
+
+
+/* Routine performed when one of the projectiles hit an enemy */
+function Player::handleHitTarget(weap, bull_idx)
+{
+	// Remove the projectile
+	if (weap == WEAP_ROCKET_TYPE)
+		rocket_launcher.removeBullet(bull_idx);
+	else
+		railgun.removeBullet(bull_idx);
+
+	// Increment the score
+	incrementScore();
 }
 
 
@@ -196,27 +247,11 @@ function Player::update()
 	var old_position = position;
 	var mouse_dx = Mouse.DeltaX;
 	var mouse_dy = Mouse.DeltaY;
+	has_moved = false;
 	
 	// Check if turning, and recompute angle accordingly
-	var mouse_x_perc = 2*(Mouse.X/640.0 - 0.5);
-	var mouse_y_perc = 2*(Mouse.Y/480.0 - 0.5);
-	
-	if (abs(mouse_x_perc) < 0.05)	// thresholding on mouse movements
-		mouse_x_perc = 0;
-	if (abs(mouse_y_perc) < 0.05)
-		mouse_y_perc = 0;
-		
-	if ((last_deltaX * mouse_x_perc > 0) || (mouse_dx * mouse_x_perc > 0))	// fast stop
-		angle_h -= SWAT_TURN_RATE * mouse_x_perc;
-	if ((last_deltaY * mouse_y_perc > 0) || (mouse_dy * mouse_y_perc > 0))
-		angle_v -= SWAT_TURN_RATE * mouse_y_perc;
-		
-	if (mouse_dx != 0) {
-		last_deltaX = mouse_dx;	
-	}
-	if (mouse_dy != 0) {
-		last_deltaY = mouse_dy;
-	}
+	angle_h -= SWAT_TURN_RATE * mouse_dx;
+	angle_v -= SWAT_TURN_RATE * mouse_dy;
 	
 	// Recompute orientation	
 	direction = [sin(angle_h), sin(angle_v), cos(angle_h)];
@@ -230,40 +265,71 @@ function Player::update()
 	// Check if moving forward/backwards, and recompute position accordingly
 	var forward_direction = [direction.x, 0, direction.z];
 	if (keypressed(VK_UP) || keypressed("w")) {
+		has_moved = true;
 		position += SWAT_STEP * forward_direction * run;
 		current_frame += SWAT_FRAME_STEP;
 		if (current_frame > SWAT_END_WALK)
 			current_frame = SWAT_START_WALK;
+		step_fx.play();
 	} else if (keypressed(VK_DOWN) || keypressed("s")) {
+		has_moved = true;
 		position -= SWAT_STEP * forward_direction * SWAT_BACKSTEP_SLOW;
 		current_frame -= SWAT_FRAME_STEP * SWAT_BACKSTEP_SLOW;
 		if (current_frame < SWAT_START_WALK)
 			current_frame = SWAT_END_WALK;
+		step_fx.play();
 	}
 	
 	// Check if sidestepping
 	var side_direction = [-direction.z, 0, direction.x]; 
 	if (keypressed(VK_RIGHT) || keypressed("d")) {
+		has_moved = true;
 		position += SWAT_STEP * side_direction;
 	}
 	if (keypressed(VK_LEFT) || keypressed("a")) {
+		has_moved = true;
 		position -= SWAT_STEP * side_direction;
 	}
 	
-	// Collision detection (revert movement if hitting a wall)
+	// Check if jumping
+	if (keypressed(VK_SPACE)) {
+		has_moved = true;
+		v_y = SWAT_JUMP_SPEED;
+		jump_fx.play();
+	}
+	
+	// Recompute vertical position and speed
+	v_y -= 0.05; 
+	position.y += v_y * 0.05;
+	
+	// Collision detection (fix movement if hitting a wall)
 	var coll_code = level.detectCollision(position, hitbox_rad);
-	if (coll_code & 4 != 0)
+	//outputln("coll_code: " + str(coll_code));
+	if (coll_code & 8 != 0) {
+		// If hitting a corner, stop! 		TODO: this can be surely improved
+		position = old_position;
+	}
+	if (coll_code & 4 != 0) {
+		// If hitting a wall parallel to the x axis, slide along it
 		position.x = old_position.x;
-	if (coll_code & 2 != 0)
-		position.y = old_position.y;
-	if (coll_code & 1 != 0)
+	}
+	if (coll_code & 2 != 0) {
+		// If hitting a wall parallel to the z axis, slide along it
 		position.z = old_position.z;
+	}
+	if (coll_code & 1 != 0) {
+		// If hitting a horizontal surface, cancel the vertical speed and fix the position
+		var point_h = level.level_matrix[int(position.z)][int(position.x)];
+		if (position.y < point_h)
+			position.y = point_h;
+		v_y = 0;
+	}
 		
 	// Apply the movement changes	
 	setRotation(angle_h);
 	setPosition(position);
 		
-	// Check if the weapon is firing and update it
+	// Check if the weapon is firing, then update it and its bullets
 	if (keypressed(VK_LBUTTON)) {
 		shoot();
 	}
@@ -280,4 +346,6 @@ function Player::update()
 	}
 	if (change_weapon_cd > 0)
 		change_weapon_cd -= 1;
+		
+	//outputln("posX: " + str(position.x) + "  posY: " + str(position.y) + "  posZ: " + str(position.z));
 }

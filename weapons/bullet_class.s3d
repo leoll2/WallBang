@@ -18,33 +18,48 @@ class Bullet
 	var life;
 	
 	// graphics
+	var scale;
 	var mesh;
 	var obj;
 	
-	init(type, pos, dir);
+	// collision detection
+	var lev;
+	
+	// audio
+	var hit_body_fx;
+	var hit_wall_fx;
+	
+	init(type, pos, dir, lvl);
 	update();
 	draw();
 };
 
 
 /* Initialize a Bullet given the player position and direction */
-function Bullet::init(type, pos, dir)
+function Bullet::init(type, pos, dir, lvl)
 {
-	position = pos + [0,1,0];	// offset for spawning outside the player body
+	var right_perp = [-dir.z, 0, dir.x];
+	
+	position = pos + [0,1.2,0] + 0.2*right_perp;	// offset for spawning from the gun
 	direction = dir;
+	lev = lvl;
 	
 	if (type == BULLET_LARGE_TYPE) {
 		speed = BULLET_LARGE_SPEED;
 		life = BULLET_LIFE;
-		mesh = CVMNewMesh(VRP_SPHERE);
-		mesh.Scale(BULLET_LARGE_SCALE);
+		scale = BULLET_LARGE_SCALE;
+		hit_body_fx = CVmVRAWAV("rocket_hit.wav");
+		hit_wall_fx = CVmVRAWAV("rocket_hit.wav");
 	} else {
 		speed = BULLET_SMALL_SPEED;
 		life = BULLET_LIFE;
-		mesh = CVMNewMesh(VRP_SPHERE);
-		mesh.Scale(BULLET_SMALL_SCALE);
+		scale = BULLET_SMALL_SCALE;
+		hit_body_fx = CVmVRAWAV("bullet_body.wav");
+		hit_wall_fx = CVmVRAWAV("bullet_wall.wav");
 	}
 	
+	mesh = CVMNewMesh(VRP_SPHERE);
+	mesh.Scale(scale);
 	obj = CVmObj(mesh);
 	obj.SetPosition(position);
 }
@@ -60,6 +75,13 @@ function Bullet::update()
 		
 	// update the position
 	position += direction * speed;
+	var coll_code = lev.detectCollision(position, scale/2.0); 
+	if (coll_code > 1 && coll_code != 16) {
+		hit_wall_fx.play();
+		// TODO apply area damage
+		life = 0;
+	}
+	
 	obj.SetPosition(position);
 	return life;
 }
