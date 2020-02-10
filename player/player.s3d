@@ -122,8 +122,8 @@ function Player::init(pos, dir, col, lvl, net)
 	obj.addchild(lower_obj);
 	obj.addchild(curr_weapon.getObject());
 	
+	SetRotation(angle_h);
 	obj.SetPosition(position);
-	obj.SetRotation(angle_h);
 	
 	upper_obj.ModulateMaterials(color);
 	

@@ -18,6 +18,7 @@ class Enemy {
 	draw();
 	update();
 	changePosition(new_pos, new_angle);
+	setRotation(angle);
 	IncrementScore();
 	tryIncrementScore(new_score);
 };
@@ -79,8 +80,14 @@ function Enemy::changePosition(new_pos, new_angle)
 {
 	pos = new_pos;
 	angle = new_angle;
+	SetRotation(angle);
 	obj.SetPosition(pos);
-	obj.SetRotation(angle);
+}
+
+
+function Enemy::setRotation(angle)
+{
+	obj.setRotation(angle*180.0/PI, 0, 1, 0);
 }
 
 
