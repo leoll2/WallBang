@@ -1,4 +1,8 @@
-#define IP_BROADCAST 		"192.168.1.255"
+#ifndef NETWORK_S3D_
+#define NETWORK_S3D_
+
+//#define IP_BROADCAST 		"192.168.1.255"
+#define IP_BROADCAST 		"10.80.35.255"
 #define IP_LISTENING 		"0.0.0.0"
 #define PORT_BROADCAST 		50023
 #define PORT_LISTENING 		50023
@@ -130,7 +134,7 @@ function NetworkManager::receivePDU()
 	var sender_ip = "...";
 	var recv_data = NetVarReceiveFrom(net_channel, &sender_ip);
 	
-	if (recv_data != null && recv_data[1] != host_id) { 	// avoid your own data 
+	if (recv_data != null && recv_data[1] != host_id) { 	// avoid your own data
 		// Update stats
 		updateOutTrafficStats(getTime(), len(recv_data));
 		return recv_data;
@@ -138,3 +142,5 @@ function NetworkManager::receivePDU()
 		return null;
 	}
 }
+
+#endif

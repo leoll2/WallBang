@@ -1,4 +1,7 @@
+#include <network/network.s3d>
 #include <weapons/weapon_class.s3d>
+
+#define TWO_PI 		6.283185
 
 #define SWAT_START_WALK 	16
 #define SWAT_END_WALK 		48
@@ -55,7 +58,10 @@ class Player {
 	// game
 	var score;
 	
-	init(pos, dir, col, level);
+	// multiplayer
+	var network;
+	
+	init(pos, dir, col, level, net);
 	getPosition();
 	getDirection();
 	setPosition(pos);
@@ -74,14 +80,15 @@ class Player {
 
 
 /* Initialize the soldier */
-function Player::init(pos, dir, col, lvl) 
+function Player::init(pos, dir, col, lvl, net) 
 {
 	position = pos;
 	direction = dir;
 	color = col;
 	level = lvl;
+	network = net;
 
-	angle_h = 0;
+	angle_h = atan2(dir.x, dir.z) % TWO_PI;
 	angle_v = 0;
 	v_y = 0;
 	run = 1;
@@ -101,9 +108,9 @@ function Player::init(pos, dir, col, lvl)
 	upper_obj = CVmObj(upper_mesh);
 	
 	rocket_launcher = Weapon();
-	rocket_launcher.init(WEAP_ROCKET_TYPE, position, direction, sf, level);
+	rocket_launcher.init(WEAP_ROCKET_TYPE, position, direction, sf, level, network);
 	railgun = Weapon();
-	railgun.init(WEAP_RAILGUN_TYPE, position, direction, sf, level);
+	railgun.init(WEAP_RAILGUN_TYPE, position, direction, sf, level, network);
 	curr_weapon = rocket_launcher;
 	curr_weapon_idx = WEAP_ROCKET_TYPE;
 	change_weapon_cd = 0;
@@ -114,7 +121,9 @@ function Player::init(pos, dir, col, lvl)
 	obj.addchild(upper_obj);
 	obj.addchild(lower_obj);
 	obj.addchild(curr_weapon.getObject());
+	
 	obj.SetPosition(position);
+	obj.SetRotation(angle_h);
 	
 	upper_obj.ModulateMaterials(color);
 	
@@ -250,8 +259,8 @@ function Player::update()
 	has_moved = false;
 	
 	// Check if turning, and recompute angle accordingly
-	angle_h -= SWAT_TURN_RATE * mouse_dx;
-	angle_v -= SWAT_TURN_RATE * mouse_dy;
+	angle_h = (angle_h - SWAT_TURN_RATE * mouse_dx) % TWO_PI;
+	angle_v = (angle_v - SWAT_TURN_RATE * mouse_dy) % TWO_PI;
 	
 	// Recompute orientation	
 	direction = [sin(angle_h), sin(angle_v), cos(angle_h)];
@@ -346,6 +355,11 @@ function Player::update()
 	}
 	if (change_weapon_cd > 0)
 		change_weapon_cd -= 1;
+		
+	if (hasMoved()) {
+		var pos_pdu = network.craftPlayerPosPDU(position, angle_h);
+		network.sendPDU(pos_pdu);
+	}
 		
 	//outputln("posX: " + str(position.x) + "  posY: " + str(position.y) + "  posZ: " + str(position.z));
 }

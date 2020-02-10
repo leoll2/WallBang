@@ -1,5 +1,7 @@
 /* The class Bullet represents a projectile fired from a weapon */
 
+#include <network/network.s3d>
+
 #define BULLET_LARGE_TYPE	0
 #define BULLET_SMALL_TYPE 	1
 #define BULLET_LARGE_SPEED 	0.2
@@ -11,6 +13,8 @@
 
 class Bullet 
 {	
+	var weap;
+	
 	// kinematics
 	var position;
 	var direction;
@@ -29,20 +33,26 @@ class Bullet
 	var hit_body_fx;
 	var hit_wall_fx;
 	
-	init(type, pos, dir, lvl);
+	// connection
+	var network;
+	
+	init(type, pos, dir, lvl, net);
+	changePosition(new_pos);
 	update();
 	draw();
 };
 
 
 /* Initialize a Bullet given the player position and direction */
-function Bullet::init(type, pos, dir, lvl)
+function Bullet::init(type, pos, dir, lvl, net)
 {
 	var right_perp = [-dir.z, 0, dir.x];
 	
+	weap = type;
 	position = pos + [0,1.2,0] + 0.2*right_perp;	// offset for spawning from the gun
 	direction = dir;
 	lev = lvl;
+	network = net;
 	
 	if (type == BULLET_LARGE_TYPE) {
 		speed = BULLET_LARGE_SPEED;
@@ -65,7 +75,15 @@ function Bullet::init(type, pos, dir, lvl)
 }
 
 
-/* Update the position of the bullet */
+/* Set the spatial position of the bullet */
+function Bullet::changePosition(new_pos)
+{
+	position = new_pos;
+	obj.SetPosition(position);
+}
+
+
+/* Update the state of the bullet, according to kinematics and game rules */
 function Bullet::update()
 {
 	// projectile decay; if over, notify the weapon
@@ -83,6 +101,7 @@ function Bullet::update()
 	}
 	
 	obj.SetPosition(position);
+	
 	return life;
 }
 

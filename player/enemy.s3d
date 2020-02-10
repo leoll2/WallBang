@@ -16,6 +16,8 @@ class Enemy {
 	
 	init(act, p, a, sc, lvl);
 	draw();
+	update();
+	changePosition(new_pos, new_angle);
 	IncrementScore();
 	tryIncrementScore(new_score);
 };
@@ -45,12 +47,40 @@ function Enemy::init(act, p, a, s, lvl)
 	obj.addchild(lower_obj);
 	// TODO add weapon mesh
 	obj.SetPosition(pos);
+	obj.SetRotation(angle);
 }
 
 
 function Enemy::draw()
 {
-	obj.Draw(VR_FRAMENUMBER, 0);
+	obj.Draw(VR_FRAMENUMBER, 1);
+	
+	for (var i=0; i<N_BULLETS_PLAYER; i++) {
+		if (bullets[i] != null) {
+			bullets[i].draw();
+		}
+	}
+}
+
+
+function Enemy::update()
+{
+	for (var i=0; i<N_BULLETS_PLAYER; i++) {
+		if (bullets[i] != null) {
+			var b_life_res = bullets[i].update();
+			if (b_life_res == 0)
+				bullets[i] = null;
+		}
+	}
+}
+
+
+function Enemy::changePosition(new_pos, new_angle)
+{
+	pos = new_pos;
+	angle = new_angle;
+	obj.SetPosition(pos);
+	obj.SetRotation(angle);
 }
 
 

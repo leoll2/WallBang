@@ -2,6 +2,7 @@
  * that can be held by the player.
  */
 
+#include <network/network.s3d>
 #include <weapons/bullet_class.s3d>
 
 #define WEAP_ROCKET_TYPE	0
@@ -40,7 +41,10 @@ class Weapon
 	// collision detection
 	var lev;
 	
-	init(type, pos, dir, sf, lvl);
+	// connection
+	var network;
+	
+	init(type, pos, dir, sf, lvl, net);
 	getObject();
 	drawEffects();
 	fire();
@@ -54,12 +58,13 @@ class Weapon
 
 
 /* Initialize the weapon */
-function Weapon::init(tp, pos, dir, sf, lvl)
+function Weapon::init(tp, pos, dir, sf, lvl, net)
 {
 	type = tp;
 	position = pos;
 	direction = dir;
 	lev = lvl;
+	network = net;
 	
 	if (type == WEAP_ROCKET_TYPE)
 		magazine_size = ROCKET_BULLETS;
@@ -147,7 +152,7 @@ function Weapon::fire()
 	else
 		bullet_type = BULLET_SMALL_TYPE;
 	bullets[free_idx] = Bullet();
-	bullets[free_idx].init(bullet_type, position, direction, lev);
+	bullets[free_idx].init(bullet_type, position, direction, lev, network);
 	shoot_fx.play();
 	n_fired += 1;
 	bullets_left -= 1;
@@ -210,7 +215,10 @@ function Weapon::update(pos, dir)
 				if (b_life_res == 0) {
 					// projectile expired
 					removeBullet(i);
-				}	
+				} else {
+					var bull_pdu = network.craftBulletPosPDU(type, ROCKET_BULLETS*type + i, bullets[i].position, bullets[i].direction, b_life_res);
+					network.sendPDU(bull_pdu);
+				}
 			}
 		}
 	}

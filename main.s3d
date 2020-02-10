@@ -8,9 +8,9 @@
 #include <player/enemy.s3d>
 
 
-#define MY_PLAYER_ID 	12
+#define MY_PLAYER_ID 	4
 
-#define CAM_GLOBAL 		0
+#define CAM_GLOBAL    	0
 #define CAM_FPV 		1
 
 #define N_PLAYERS	 	8
@@ -95,21 +95,22 @@ function OnInit(params)
 	Light0.SetDiffuse(1, 1, 1);
 	Light0.Enable();
 
+	myNetwork = NetworkManager();
+	myNetwork.init(MY_PLAYER_ID);
+
 	myLevel = Level();
 	myLevel.init("level_3D.txt");
 	
 	myPlayer = Player();
 	var spawn_pos = myLevel.getRandomFloorPosition();
 	var spawn_dir = myLevel.getNonWallDirection(spawn_pos);
-	myPlayer.init(spawn_pos, spawn_dir, [0,1,0], myLevel);
+	outputln("Spawned in " + str(spawn_pos));
+	myPlayer.init(spawn_pos, spawn_dir, [0,1,0], myLevel, myNetwork);
 	
 	for (var i=0; i<N_PLAYERS; i++) {
 		enemies[i] = Enemy();
 		enemies[i].init(false, [0,0,0], 0, 0, myLevel);
 	}
-	
-	myNetwork = NetworkManager();
-	myNetwork.init(MY_PLAYER_ID);
 	
 	// Initialize camera
 	//initCamera(CAM_GLOBAL, globalCamDefaultPos, [0,0,-1]);
@@ -142,17 +143,15 @@ function OnFrame()
 	DrawGrid([0.5, 0.5, 0.5], 100);
 	
 	myPlayer.update();
-	if (myPlayer.hasMoved()) {
-		var pos_pdu = myNetwork.craftPlayerPosPDU(myPlayer.position, myPlayer.angle_h);
-		myNetwork.sendPDU(pos_pdu);
-	}
 	
 	// Draw the map and the active players
 	myLevel.draw();
 	myPlayer.draw();
 	for (var i=0; i<N_PLAYERS; i++) {
-		if (enemies[i].active)
-			enemies[i].draw();
+		if (enemies[i].active) {
+			enemies[i].update();
+			enemies[i].draw();	
+		}
 	}
 	
 	drawHUD();
@@ -180,21 +179,21 @@ function OnTimer()
 	
 	// Handle the PDU, if any
 	if (pdu != null) {
-
+		
 		// Position update:
 		// [0]-typePDU, [1]-sender, [2,3,4]-posXYZ, [5]-angle
 		if (pdu[0] == POSITION_PDU) {
 			var player_id = pdu[1];
 			enemies[player_id].active = true;
-			enemies[player_id].pos = [pdu[2], pdu[3], pdu[4]];
-			enemies[player_id].angle = pdu[5];	
+			enemies[player_id].changePosition([pdu[2], pdu[3], pdu[4]], pdu[5]);
+			outputln(pdu[5]);	
 		}
 		
 		// Bullet update:
 		// [0]-typePDU, [1]-sender, [2]-weapon, [3]-bull_idx, [4,5,6]-posXYZ, [7,8,9]-dirXYZ, [10]-life
 		if (pdu[0] == BULLET_PDU) {
 			var player_id = pdu[1];
-			enemies[player_id].bullets[pdu[2]*ROCKET_BULLETS + pdu[3]].position = [pdu[4], pdu[5], pdu[6]];
+			enemies[player_id].bullets[pdu[2]*ROCKET_BULLETS + pdu[3]].changePosition([pdu[4], pdu[5], pdu[6]]);
 			enemies[player_id].bullets[pdu[2]*ROCKET_BULLETS + pdu[3]].direction = [pdu[7], pdu[8], pdu[9]];
 			enemies[player_id].bullets[pdu[2]*ROCKET_BULLETS + pdu[3]].life = pdu[10];
 		}
