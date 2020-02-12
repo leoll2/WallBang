@@ -51,7 +51,6 @@ function Bullet::init(type, pos, dir, lvl, net)
 	var right_perp = [-dir.z, 0, dir.x];
 
 	uid = Rand(32767);
-	outputln("created bullet with uid " + str(uid));
 	weap = type;
 	position = pos + [0,1.2,0] + 0.2*right_perp;	// offset for spawning from the gun
 	direction = dir;
@@ -112,9 +111,8 @@ function Bullet::update(check_player_coll, player_pos)
 	}
 	
 	// Check if the bullet collided with my avatar
-	// If so, receive damage and notify the other players
 	if (check_player_coll) {
-		if ((modulus(player_pos.x_z - position.x_z) < 0.3) && (position.z - player_pos.z < 1.8)) {
+		if ((modulus(player_pos.x_z - position.x_z) < 0.3) && (position.y - player_pos.y < 1.8)) {
 			hit_body_fx.play();
 			life = -1;
 		}
@@ -128,6 +126,5 @@ function Bullet::update(check_player_coll, player_pos)
 /* Draw the bullet */
 function Bullet::draw()
 {
-	outputln("drawing bullet at " + str(position));
 	obj.Draw();
 }

@@ -192,7 +192,6 @@ function OnTimer()
 		// [0]-typePDU, [1]-sender, [2]-weapon, [3]-bull_idx, [4,5,6]-posXYZ, [7,8,9]-dirXYZ, [10]-life, [11]-uniqueID
 		if (pdu[0] == BULLET_PDU) {
 			var player_id = pdu[1];
-			outputln("[PDU] weap: " + str(pdu[2]) + " bidx: " + str(pdu[3]));
 			enemies[player_id].setBullet(
 					pdu[2]*ROCKET_BULLETS + pdu[3], 
 					[pdu[4], pdu[5], pdu[6]],
@@ -203,7 +202,7 @@ function OnTimer()
 		}
 		
 		// Bullet hit notification:
-		// [0]-typePDU, [1]-player_hit, [2]-hitter, [3]-weapon, [4]-bull_idx, [5]-bull_UID
+		// [0]-typePDU, [1]-player_hit, [2]-hitter, [3]-weapon, [4]-bull_idx
 		if (pdu[0] == HIT_PDU) {
 			var player_hit_id = pdu[1];
 			var hitter_id = pdu[2];

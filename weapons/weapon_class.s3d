@@ -216,7 +216,7 @@ function Weapon::update(pos, dir)
 					// projectile expired
 					removeBullet(i);
 				} else {
-					var bull_pdu = network.craftBulletPosPDU(type, ROCKET_BULLETS*type + i, bullets[i].position, bullets[i].direction, b_life_res, bullets[i].uid);
+					var bull_pdu = network.craftBulletPosPDU(type, i, bullets[i].position, bullets[i].direction, b_life_res, bullets[i].uid);
 					network.sendPDU(bull_pdu);
 				}
 			}
