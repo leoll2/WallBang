@@ -5,8 +5,8 @@
 
 #define SWAT_START_WALK 	16
 #define SWAT_END_WALK 		48
-#define SWAT_STEP			0.05
-#define SWAT_FRAME_STEP 	0.6
+#define SWAT_STEP			0.004
+#define SWAT_FRAME_STEP 	0.5
 #define SWAT_TURN_RATE 		0.01
 #define SWAT_BACKSTEP_SLOW  0.8
 #define SWAT_JUMP_SPEED     1.0
@@ -24,6 +24,7 @@ class Player {
 	var v_y;
 	var is_jumping;
 	var has_moved;
+	var prev_time;
 	
 	// weaponry
 	var rocket_launcher;
@@ -96,6 +97,7 @@ function Player::init(pos, dir, col, lvl, net)
 	hitbox_rad = SWAT_HITBOX_RADIUS;
 	last_deltaX = 0;
 	last_deltaY = 0;
+	prev_time = getTime();
 	
 	current_frame = SWAT_START_WALK;
 	
@@ -258,6 +260,7 @@ function Player::update()
 	has_moved = false;
 	var mouse_dx = Mouse.DeltaX;
 	var mouse_dy = Mouse.DeltaY;
+	var t = getTime();
 	
 	// Check if turning, and recompute angle accordingly
 	angle_h = (angle_h - SWAT_TURN_RATE * mouse_dx) % TWO_PI;
@@ -276,14 +279,14 @@ function Player::update()
 	var forward_direction = [direction.x, 0, direction.z];
 	if (keypressed(VK_UP) || keypressed("w")) {
 		has_moved = true;
-		position += SWAT_STEP * forward_direction * run;
+		position += SWAT_STEP * (t - prev_time) * forward_direction * run;
 		current_frame += SWAT_FRAME_STEP;
 		if (current_frame > SWAT_END_WALK)
 			current_frame = SWAT_START_WALK;
 		step_fx.play();
 	} else if (keypressed(VK_DOWN) || keypressed("s")) {
 		has_moved = true;
-		position -= SWAT_STEP * forward_direction * SWAT_BACKSTEP_SLOW;
+		position -= SWAT_STEP * (t - prev_time) * forward_direction * SWAT_BACKSTEP_SLOW;
 		current_frame -= SWAT_FRAME_STEP * SWAT_BACKSTEP_SLOW;
 		if (current_frame < SWAT_START_WALK)
 			current_frame = SWAT_END_WALK;
@@ -294,11 +297,11 @@ function Player::update()
 	var side_direction = [-direction.z, 0, direction.x]; 
 	if (keypressed(VK_RIGHT) || keypressed("d")) {
 		has_moved = true;
-		position += SWAT_STEP * side_direction;
+		position += SWAT_STEP * (t - prev_time) * side_direction;
 	}
 	if (keypressed(VK_LEFT) || keypressed("a")) {
 		has_moved = true;
-		position -= SWAT_STEP * side_direction;
+		position -= SWAT_STEP * (t - prev_time) * side_direction;
 	}
 	
 	// Check if jumping
@@ -311,7 +314,7 @@ function Player::update()
 	}
 	
 	// Recompute vertical position and speed
-	v_y -= 0.05; 
+	v_y -= 0.05;
 	position.y += v_y * 0.05;
 	
 	// Collision detection (fix movement if hitting a wall)
@@ -387,5 +390,6 @@ function Player::update()
 		network.sendPDU(pos_pdu);
 	}
 		
+	prev_time = t;
 	//outputln("posX: " + str(position.x) + "  posY: " + str(position.y) + "  posZ: " + str(position.z));
 }

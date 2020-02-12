@@ -4,8 +4,8 @@
 
 #define BULLET_LARGE_TYPE	0
 #define BULLET_SMALL_TYPE 	1
-#define BULLET_LARGE_SPEED 	0.2
-#define BULLET_SMALL_SPEED 	0.35
+#define BULLET_LARGE_SPEED 	0.02
+#define BULLET_SMALL_SPEED 	0.035
 #define BULLET_LARGE_SCALE	0.25
 #define BULLET_SMALL_SCALE 	0.1
 #define BULLET_LIFE 		100
@@ -21,6 +21,7 @@ class Bullet
 	var direction;
 	var speed;
 	var life;
+	var prev_time;
 	
 	// graphics
 	var scale;
@@ -49,12 +50,14 @@ function Bullet::init(type, pos, dir, lvl, net)
 {
 	var right_perp = [-dir.z, 0, dir.x];
 
-	uid = Rand(32767);	
+	uid = Rand(32767);
+	outputln("created bullet with uid " + str(uid));
 	weap = type;
 	position = pos + [0,1.2,0] + 0.2*right_perp;	// offset for spawning from the gun
 	direction = dir;
 	lev = lvl;
 	network = net;
+	prev_time = getTime();
 	
 	if (type == BULLET_LARGE_TYPE) {
 		speed = BULLET_LARGE_SPEED;
@@ -96,7 +99,10 @@ function Bullet::update(check_player_coll, player_pos)
 		return 0;
 		
 	// Update the position
-	position += direction * speed;
+	var t = getTime();
+	position += direction * speed * (t - prev_time);
+	prev_time = t;
+	
 	// Check if the bullet collided with a wall
 	var wall_coll_code = lev.detectCollision(position, scale/2.0);
 	if (wall_coll_code != 0 && wall_coll_code != 64) {
@@ -113,7 +119,6 @@ function Bullet::update(check_player_coll, player_pos)
 			life = -1;
 		}
 	}
-	
 	obj.SetPosition(position);
 	
 	return life;
@@ -123,5 +128,6 @@ function Bullet::update(check_player_coll, player_pos)
 /* Draw the bullet */
 function Bullet::draw()
 {
+	outputln("drawing bullet at " + str(position));
 	obj.Draw();
 }
