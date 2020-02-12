@@ -1,11 +1,12 @@
 class Enemy {
 	
+	var id;
 	var active;
 	var pos;
 	var angle;
 	var score;
-	var level;
 	var bullets;
+	var last_uid;
 	
 	// graphics
 	var lower_mesh;
@@ -14,27 +15,41 @@ class Enemy {
 	var upper_obj;
 	var obj;
 	
-	init(act, p, a, sc, lvl);
+	// collision detection
+	var my_player;
+	var level;
+	
+	// connection
+	var network;
+	
+	init(enemy_id, act, p, a, sc, pl, lvl, net);
 	draw();
 	update();
 	changePosition(new_pos, new_angle);
 	setRotation(angle);
+	setBullet(idx, pos, dir, life, uid);
 	IncrementScore();
 	tryIncrementScore(new_score);
 };
 
 
-function Enemy::init(act, p, a, s, lvl)
+function Enemy::init(enemy_id, act, p, a, s, pl, lvl, net)
 {
+	id = enemy_id;
 	active = act;
 	pos = p;
 	angle = a;
 	score = s;
+	my_player = pl; 
 	level = lvl;
+	network = net;
 	
 	bullets = array(N_BULLETS_PLAYER);
-	for (var i=0; i<N_BULLETS_PLAYER; i++)
+	last_uid = array(N_BULLETS_PLAYER);
+	for (var i=0; i<N_BULLETS_PLAYER; i++) {
 		bullets[i] = null;
+		last_uid[i] = -1;	
+	}
 		
 	lower_mesh = CVmNewMesh("swat_lower.aam");
 	var sf = lower_mesh.normalize(1);
@@ -68,9 +83,27 @@ function Enemy::update()
 {
 	for (var i=0; i<N_BULLETS_PLAYER; i++) {
 		if (bullets[i] != null) {
-			var b_life_res = bullets[i].update();
-			if (b_life_res == 0)
-				bullets[i] = null;
+			var b_life_res = bullets[i].update(true, my_player.position);
+			
+			if (b_life_res <= 0) {
+				// stop the projectile, for whatever reason
+				bullets[i] = null;	
+			}
+			if (b_life_res == -1) {
+				// the bullet hit my player
+				var weap, bull_idx;
+				outputln("My player was hit!!");
+				// TODO apply human damage or area
+				if (i < ROCKET_BULLETS) {
+					weap = WEAP_ROCKET_TYPE;
+					bull_idx = i;
+				} else {
+					weap = WEAP_RAILGUN_TYPE;
+					bull_idx = i - ROCKET_BULLETS;
+				}
+				var pdu = network.craftHitPDU(id, weap, bull_idx, bullets[i].uid);
+				network.sendPDU(pdu);
+			}
 		}
 	}
 }
@@ -88,6 +121,33 @@ function Enemy::changePosition(new_pos, new_angle)
 function Enemy::setRotation(angle)
 {
 	obj.setRotation(angle*180.0/PI, 0, 1, 0);
+}
+
+
+/* Create a bullet with the specified parameters or, if it already exists, update it. */
+function Enemy::setBullet(idx, pos, dir, life, uid)
+{
+	if ((bullets[idx] == null) && (uid != last_uid[idx])) {
+		outputln("Creating bullet idx " + str(idx) + " pos " + str(pos) + " dir " + str(dir) + " life " + str(life) + " uid " + str(uid));
+		var btype;
+		if (idx < ROCKET_BULLETS)
+			btype = BULLET_LARGE_TYPE;
+		else
+			btype = BULLET_SMALL_TYPE;
+			
+		bullets[idx] = Bullet();
+		bullets[idx].init(btype, pos, dir, level, network);
+		// Enforce the UID
+		bullets[idx].uid = uid;
+		last_uid[idx] = uid;
+	} else {
+		bullets[idx].changePosition(pos);
+		//bullets[idx].dir = dir;		// unnecessary since direction is constant
+		bullets[idx].life = life;
+	}
+	// check if expired
+	if (bullets[idx].life == 0)
+		bullets[idx] = null;
 }
 
 

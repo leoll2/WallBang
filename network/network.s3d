@@ -29,7 +29,8 @@ class NetworkManager {
 	updateInTrafficStats(time, size);
 	updateOutTrafficStats(time, size);
 	craftPlayerPosPDU(pos, angle);
-	craftBulletPosPDU(weap, bull_idx, pos, dir, life);
+	craftBulletPosPDU(weap, bull_idx, pos, dir, life, uid);
+	craftHitPDU(hitter, weap, bull_idx, bull_uid);
 	sendPDU(pdu);
 	receivePDU();
 };
@@ -95,9 +96,9 @@ function NetworkManager::craftPlayerPosPDU(pos, angle)
 
 
 /* Create a PDU for updates about the position of a bullet
- * [0]-typePDU, [1]-sender, [2]-weapon, [3]-bull_idx, [4,5,6]-posXYZ, [7,8,9]-dirXYZ, [10]-life
+ * [0]-typePDU, [1]-sender, [2]-weapon, [3]-bull_idx, [4,5,6]-posXYZ, [7,8,9]-dirXYZ, [10]-life, [11]-uniqueID
  */
- function NetworkManager::craftBulletPosPDU(weap, bull_idx, pos, dir, life)
+ function NetworkManager::craftBulletPosPDU(weap, bull_idx, pos, dir, life, uid)
  {
  	var pdu = vector(11);
 	
@@ -112,9 +113,28 @@ function NetworkManager::craftPlayerPosPDU(pos, angle)
 	pdu[8] = dir.y;
 	pdu[9] = dir.z;
 	pdu[10] = life;
+	pdu[11] = uid;
 	
 	return pdu;	
  }
+
+
+/* Create a PDU to notify the other players about you being hit. 
+ * [0]-typePDU, [1]-player_hit, [2]-hitter, [3]-weapon, [4]-bull_idx, [5]-bull_UID
+ */
+function NetworkManager::craftHitPDU(hitter, weap, bull_idx, bull_uid)
+{
+	var pdu = vector(6);
+	
+	pdu[0] = HIT_PDU;
+	pdu[1] = host_id;
+	pdu[2] = hitter;
+	pdu[3] = weap;
+	pdu[4] = bull_idx;
+	pdu[5] = bull_uid;
+	
+	return pdu;
+}
 
 
 /* Broadcast a PDU over the network */

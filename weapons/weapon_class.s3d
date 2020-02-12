@@ -212,11 +212,11 @@ function Weapon::update(pos, dir)
 		for (var i=0; i < magazine_size; i++) {
 			if (bullets[i] != null) {
 				var b_life_res = bullets[i].update(false, [0,0,0]);
-				if (b_life_res == 0) {
+				if (b_life_res <= 0) {
 					// projectile expired
 					removeBullet(i);
 				} else {
-					var bull_pdu = network.craftBulletPosPDU(type, ROCKET_BULLETS*type + i, bullets[i].position, bullets[i].direction, b_life_res);
+					var bull_pdu = network.craftBulletPosPDU(type, ROCKET_BULLETS*type + i, bullets[i].position, bullets[i].direction, b_life_res, bullets[i].uid);
 					network.sendPDU(bull_pdu);
 				}
 			}

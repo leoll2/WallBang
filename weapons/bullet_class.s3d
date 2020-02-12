@@ -13,6 +13,7 @@
 
 class Bullet 
 {	
+	var uid;
 	var weap;
 	
 	// kinematics
@@ -47,7 +48,8 @@ class Bullet
 function Bullet::init(type, pos, dir, lvl, net)
 {
 	var right_perp = [-dir.z, 0, dir.x];
-	
+
+	uid = Rand(999999999);	
 	weap = type;
 	position = pos + [0,1.2,0] + 0.2*right_perp;	// offset for spawning from the gun
 	direction = dir;
@@ -83,7 +85,9 @@ function Bullet::changePosition(new_pos)
 }
 
 
-/* Update the state of the bullet, according to kinematics and game rules */
+/* Update the state of the bullet, according to kinematics and game rules.
+ * Return the number of life ticks left for the bullet, 
+ */
 function Bullet::update(check_player_coll, player_pos)
 {
 	// projectile decay; if expired, let the weapon know
@@ -93,7 +97,6 @@ function Bullet::update(check_player_coll, player_pos)
 		
 	// Update the position
 	position += direction * speed;
-	
 	// Check if the bullet collided with a wall
 	var wall_coll_code = lev.detectCollision(position, scale/2.0);
 	if (wall_coll_code != 0 && wall_coll_code != 64) {
@@ -102,15 +105,15 @@ function Bullet::update(check_player_coll, player_pos)
 		life = 0;
 	}
 	
-	// Check if the bullet collided with the player
+	// Check if the bullet collided with my avatar
+	// If so, receive damage and notify the other players
 	if (check_player_coll) {
-		if ((modulus(player_pos.x_z - position.x_z) < 0.3) && (position - player_pos.z < 1.8)) {
+		if ((modulus(player_pos.x_z - position.x_z) < 0.3) && (position.z - player_pos.z < 1.8)) {
 			hit_body_fx.play();
-			// TODO apply human damage or area
-			life = 0;
+			life = -1;
 		}
 	}
-
+	
 	obj.SetPosition(position);
 	
 	return life;
