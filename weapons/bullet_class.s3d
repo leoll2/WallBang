@@ -49,7 +49,7 @@ function Bullet::init(type, pos, dir, lvl, net)
 {
 	var right_perp = [-dir.z, 0, dir.x];
 
-	uid = Rand(999999999);	
+	uid = Rand(32767);	
 	weap = type;
 	position = pos + [0,1.2,0] + 0.2*right_perp;	// offset for spawning from the gun
 	direction = dir;
