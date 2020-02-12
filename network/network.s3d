@@ -100,7 +100,7 @@ function NetworkManager::craftPlayerPosPDU(pos, angle)
  */
  function NetworkManager::craftBulletPosPDU(weap, bull_idx, pos, dir, life, uid)
  {
- 	var pdu = vector(11);
+ 	var pdu = vector(12);
 	
 	pdu[0] = BULLET_PDU;
 	pdu[1] = host_id;
