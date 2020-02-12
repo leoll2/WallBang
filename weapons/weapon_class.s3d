@@ -211,7 +211,7 @@ function Weapon::update(pos, dir)
 	if (n_fired > 0) {
 		for (var i=0; i < magazine_size; i++) {
 			if (bullets[i] != null) {
-				var b_life_res = bullets[i].update();
+				var b_life_res = bullets[i].update(false, [0,0,0]);
 				if (b_life_res == 0) {
 					// projectile expired
 					removeBullet(i);

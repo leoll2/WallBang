@@ -22,7 +22,7 @@ class Player {
 	var angle_v;
 	var direction;
 	var v_y;
-	var run;
+	var is_jumping;
 	var has_moved;
 	
 	// weaponry
@@ -91,7 +91,7 @@ function Player::init(pos, dir, col, lvl, net)
 	angle_h = atan2(dir.x, dir.z) % TWO_PI;
 	angle_v = 0;
 	v_y = 0;
-	run = 1;
+	is_jumping = false;
 	has_moved = false;
 	hitbox_rad = SWAT_HITBOX_RADIUS;
 	last_deltaX = 0;
@@ -254,13 +254,16 @@ function Player::handleHitTarget(weap, bull_idx)
 function Player::update()
 {
 	var old_position = position;
+	var run = 1;
+	has_moved = false;
 	var mouse_dx = Mouse.DeltaX;
 	var mouse_dy = Mouse.DeltaY;
-	has_moved = false;
 	
 	// Check if turning, and recompute angle accordingly
 	angle_h = (angle_h - SWAT_TURN_RATE * mouse_dx) % TWO_PI;
 	angle_v = (angle_v - SWAT_TURN_RATE * mouse_dy) % TWO_PI;
+	if (mouse_dx != 0)
+		has_moved = true;
 	
 	// Recompute orientation	
 	direction = [sin(angle_h), sin(angle_v), cos(angle_h)];
@@ -268,8 +271,6 @@ function Player::update()
 	// Check if running
 	if (keypressed(VK_SHIFT))
 		run = 2;
-	else
-		run = 1;
 	
 	// Check if moving forward/backwards, and recompute position accordingly
 	var forward_direction = [direction.x, 0, direction.z];
@@ -301,8 +302,10 @@ function Player::update()
 	}
 	
 	// Check if jumping
-	if (keypressed(VK_SPACE)) {
+	if (keypressed(VK_SPACE) && (!is_jumping)) {
+		outputln("jump");
 		has_moved = true;
+		is_jumping = true;
 		v_y = SWAT_JUMP_SPEED;
 		jump_fx.play();
 	}
@@ -313,10 +316,21 @@ function Player::update()
 	
 	// Collision detection (fix movement if hitting a wall)
 	var coll_code = level.detectCollision(position, hitbox_rad);
-	//outputln("coll_code: " + str(coll_code));
-	if (coll_code & 8 != 0) {
-		// If hitting a corner, stop! 		TODO: this can be surely improved
-		position = old_position;
+	//outputln(coll_code);
+	if (coll_code & 32 != 0) {
+		// When hitting a corner, consider the two axes separately.
+		// Moving along each axis is allowed only if the direction is not
+		// towards the corner, that is the player is going away from it.  
+		var dx = position.x - old_position.x;
+		var dy = position.y - old_position.y;
+		var dz = position.z - old_position.z;
+		var prohib_x = (coll_code & 16) - 0.5;
+		var prohib_z = (coll_code & 8) - 0.5;
+		if (dx * prohib_x > 0)
+			dx = 0;
+		if (dz * prohib_z > 0)
+			dz = 0;
+		position = old_position + [dx, dy, dz];
 	}
 	if (coll_code & 4 != 0) {
 		// If hitting a wall parallel to the x axis, slide along it
@@ -329,11 +343,23 @@ function Player::update()
 	if (coll_code & 1 != 0) {
 		// If hitting a horizontal surface, cancel the vertical speed and fix the position
 		var point_h = level.level_matrix[int(position.z)][int(position.x)];
-		if (position.y < point_h)
-			position.y = point_h;
+		if (position.y < point_h) {
+			//outputln("setting height from " + str(position.y) + " to " + str(point_h));
+			if (point_h - position.y > 1.0) {
+				// attempt to climb a definitely too high wall
+				var delta_pos = Norm(position.x_z - old_position.x_z);
+				position -= delta_pos;
+				position.y = level.level_matrix[int(position.z)][int(position.x)];
+				outputln(delta_pos);
+				is_jumping = false;
+			} else {
+				// just a typical "slightly below the floor" due to gravity, or a small successful leap
+				position.y = point_h;
+				is_jumping = false;
+			}
+		}
 		v_y = 0;
 	}
-		
 	// Apply the movement changes	
 	setRotation(angle_h);
 	setPosition(position);

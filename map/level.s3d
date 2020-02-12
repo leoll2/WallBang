@@ -83,8 +83,10 @@ function Level::init(level_textfile)
  * 0 (1) -> collision with an horizontal surface
  * 1 (2) -> collision with a wall parallel to Z
  * 2 (4) -> collision with a wall parallel to X
- * 3 (8) -> collision with a corner of walls parallel to X and Y, respectively
- * 4 (16)-> out of map
+ * 3 (8) -> if collision with corner, Z value (0 low, 1 high)
+ * 4 (16)-> if collision with corner, X value (0 low, 1 high)
+ * 5 (32)-> collision with a corner of walls parallel to X and Y, respectively
+ * 6 (64)-> out of map
  * */
 function Level::detectCollision(pos, r)
 {
@@ -94,7 +96,7 @@ function Level::detectCollision(pos, r)
 	
 	// Check if out-of-map
 	if ((i < 0) || (i > n_rows-1) || (j < 0) || (j > n_cols-1)) {
-		return 16;
+		return 64;
 	}
 	
 	// Set of points to test (i.e. the vertices of a square enclosing this object)
@@ -108,6 +110,7 @@ function Level::detectCollision(pos, r)
 	if (j_low < 0) j_low = 0;
 	if (j_high > n_cols-1) j_high = n_cols-1;
 	
+	var h = level_matrix[i][j];
 	var hA = level_matrix[i_low][j_low];
 	var hB = level_matrix[i_low][j_high];
 	var hC = level_matrix[i_high][j_high];
@@ -115,22 +118,27 @@ function Level::detectCollision(pos, r)
 	
 	// If colliding, detect where
 	// vertical
-	if (pos.y >= level_matrix[i][j]) {
-		return coll_code;
-	} else {
+	if (pos.y < h) {
 		coll_code |= 1;
+	} else {
+		return coll_code;
 	}
 	// horizontal
-	if ((hA != 0 && hD != 0) ||	(hB != 0 && hC != 0)) {
+	if ((hA > h && hD > h) || (hB > h && hC > h)) {
 		coll_code |= 4;
 	}
-	if ((hA != 0 && hB != 0) || (hC != 0 && hD != 0)) {
+	if ((hA > h && hB > h) || (hC > h && hD > h)) {
 		coll_code |= 2;	
 	}
 	// corner
-	if ((coll_code & 6 == 0) && (hA != 0 || hB != 0 || hC !=0 || hD != 0)) {
+	if ((coll_code & 6 == 0) && (h > pos.y) && (hA > h || hB > h || hC > h || hD > h)) {
 		//outputln("Corner collision!");
-		if (level_matrix[i][j] > pos.y)
+		coll_code |= 32;
+		if (hB > h)
+			coll_code |= 16;
+		if (hC > h)
+			coll_code |= 24;
+		if (hD > h)
 			coll_code |= 8;
 	}
 	

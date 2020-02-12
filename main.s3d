@@ -149,7 +149,7 @@ function OnFrame()
 	myPlayer.draw();
 	for (var i=0; i<N_PLAYERS; i++) {
 		if (enemies[i].active) {
-			enemies[i].update();
+			enemies[i].update(true, myPlayer.position);
 			enemies[i].draw();	
 		}
 	}
@@ -186,7 +186,6 @@ function OnTimer()
 			var player_id = pdu[1];
 			enemies[player_id].active = true;
 			enemies[player_id].changePosition([pdu[2], pdu[3], pdu[4]], pdu[5]);
-			outputln(pdu[5]);	
 		}
 		
 		// Bullet update:

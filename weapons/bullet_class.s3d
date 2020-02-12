@@ -38,7 +38,7 @@ class Bullet
 	
 	init(type, pos, dir, lvl, net);
 	changePosition(new_pos);
-	update();
+	update(check_player_coll, player_pos);
 	draw();
 };
 
@@ -84,22 +84,33 @@ function Bullet::changePosition(new_pos)
 
 
 /* Update the state of the bullet, according to kinematics and game rules */
-function Bullet::update()
+function Bullet::update(check_player_coll, player_pos)
 {
-	// projectile decay; if over, notify the weapon
+	// projectile decay; if expired, let the weapon know
 	life -= 1;
 	if (life <= 0)
 		return 0;
 		
-	// update the position
+	// Update the position
 	position += direction * speed;
-	var coll_code = lev.detectCollision(position, scale/2.0); 
-	if (coll_code > 1 && coll_code != 16) {
+	
+	// Check if the bullet collided with a wall
+	var wall_coll_code = lev.detectCollision(position, scale/2.0);
+	if (wall_coll_code != 0 && wall_coll_code != 64) {
 		hit_wall_fx.play();
 		// TODO apply area damage
 		life = 0;
 	}
 	
+	// Check if the bullet collided with the player
+	if (check_player_coll) {
+		if ((modulus(player_pos.x_z - position.x_z) < 0.3) && (position - player_pos.z < 1.8)) {
+			hit_body_fx.play();
+			// TODO apply human damage or area
+			life = 0;
+		}
+	}
+
 	obj.SetPosition(position);
 	
 	return life;
