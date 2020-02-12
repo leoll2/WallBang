@@ -129,7 +129,6 @@ function Enemy::setBullet(idx, pos, dir, life, uid)
 {
 	if ((bullets[idx] == null) && (uid != last_uid[idx])) {
 		// if the bullet does not exist, and the UID is not the same of the last destroyed bullet
-		outputln("Creating bullet idx " + str(idx) + " pos " + str(pos) + " dir " + str(dir) + " life " + str(life) + " uid " + str(uid));
 		var btype;
 		if (idx < ROCKET_BULLETS)
 			btype = BULLET_LARGE_TYPE;

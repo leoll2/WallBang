@@ -10,6 +10,7 @@ class Level
 	var floor_mesh;
 	var floor_material;
 	var floor_texture;
+	var sky_mesh;
 	
 	// topology
 	var n_rows;
@@ -34,7 +35,7 @@ function Level::init(level_textfile)
 	trace(n_rows, n_cols);
 	
 	// Configure the walls visual parameters (e.g. textures)
-	wall_texture = CVmTexture("concrete_wall.jpg");
+	wall_texture = CVmTexture("mattoni_1.png");
 	wall_material = CVmMaterial();
 	wall_material.SetTexture(wall_texture);
 	wall_material.ChangeTextureParams(VR_V_TILING, 3);
@@ -75,6 +76,10 @@ function Level::init(level_textfile)
 	floor_mesh.scale(n_cols, 1, n_rows);
 	floor_mesh.translate(0,-1,0);
 	floor_mesh.SetMaterial(floor_material);
+	
+	// Configure the sky
+	sky_mesh = CVmNewMesh("sky.aam");
+	sky_mesh.translate(n_rows/2.0, 0, n_cols/2.0);
 }
 
 
@@ -185,4 +190,5 @@ function Level::draw()
 		w.Draw();
 	wall_mesh.Draw();
 	floor_mesh.Draw();
+	sky_mesh.Draw();
 }

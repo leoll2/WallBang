@@ -57,7 +57,8 @@ class Player {
 	var level;
 	
 	// game
-	var score;
+	var kills;
+	var deaths;
 	
 	// multiplayer
 	var network;
@@ -73,7 +74,8 @@ class Player {
 	getMagazineSize();
 	hasMoved();
 	isReloading();
-	incrementScore();
+	incrementKills();
+	incrementDeaths();
 	handleHitTarget(weap, bull_idx);
 	draw();
 	update();
@@ -117,7 +119,8 @@ function Player::init(pos, dir, col, lvl, net)
 	curr_weapon_idx = WEAP_ROCKET_TYPE;
 	change_weapon_cd = 0;
 	
-	score = 0;
+	kills = 0;
+	deaths = 0;
 	
 	obj = CVmObj();
 	obj.addchild(upper_obj);
@@ -131,6 +134,9 @@ function Player::init(pos, dir, col, lvl, net)
 	
 	step_fx = CVmVRAWAV("step.wav");
 	jump_fx = CVmVRAWAV("jump.wav");
+	
+	var pos_pdu = network.craftPlayerPosPDU(position, angle_h);
+	network.sendPDU(pos_pdu);
 }
 
 
@@ -231,10 +237,17 @@ function Player::isReloading()
 }
 
 
-/* Increment the score */
-function Player::incrementScore()
+/* Record a kill */
+function Player::incrementKills()
 {
-	score += 1;
+	kills += 1;
+}
+
+
+/* Record a death */
+function Player::incrementDeaths()
+{
+	deaths += 1;
 }
 
 
@@ -247,8 +260,8 @@ function Player::handleHitTarget(weap, bull_idx)
 	else
 		railgun.removeBullet(bull_idx);
 
-	// Increment the score
-	incrementScore();
+	// Increment the kill
+	incrementKills();
 }
 
 

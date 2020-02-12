@@ -29,7 +29,7 @@ var globalCamDefaultPos = [2.0, 5.0, 30.0];
 
 // Light globals
 var Light0;
-var PosL = [16.0, 100.0, 16.0];	// default light position
+var PosL = [0.0, 30.0, 0.0];	// default light position
 
 // Level globals
 var myLevel;
@@ -54,9 +54,10 @@ function DrawGrid(col, size);
 function drawHUD()
 {
 	// Show stats
-	ConsoleFont("Impact", 18);
+	ConsoleFont("Impact", 20);
 	ConsoleColor(0.4, 0.6, 1.0);
-	ConsoleText(0.8,0.9, "Ammo: " + str(myPlayer.getRemainingShots()) + "/" + str(myPlayer.getMagazineSize()));
+	ConsoleText(0.05, 0.1, "Ammo:    " + str(myPlayer.getRemainingShots()) + "/" + str(myPlayer.getMagazineSize()));
+	ConsoleText(0.05, 0.05, "K/D:  " + str(myPlayer.kills) + "/" + str(myPlayer.deaths));
 	
 	// Show notifications
 	if (myPlayer.isReloading()) {
@@ -72,6 +73,14 @@ function drawHUD()
 	ConsoleWidth(3);
 	ConsoleLines(scope1);
 	ConsoleLines(scope2);
+}
+
+
+/* Draw the overlay scoreboard */
+function drawScoreBoard()
+{
+	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleFilledRect(0.25, 0.75, 0.5, 0.5);
 }
 
 
@@ -92,7 +101,8 @@ function OnInit(params)
 	// Initialize light
 	Light0 = CVmLight();
 	Light0.SetPosition(PosL);
-	Light0.SetDiffuse(1, 1, 1);
+	Light0.SetAmbient(0.6, 0.6, 0.6);
+	Light0.SetDiffuse(1, 0.85, 0.85);
 	Light0.Enable();
 
 	myNetwork = NetworkManager();
@@ -140,7 +150,7 @@ function OnFrame()
 
 	SceneBegin();
 
-	DrawGrid([0.5, 0.5, 0.5], 100);
+	//DrawGrid([0.5, 0.5, 0.5], 100);
 	
 	myPlayer.update();
 	
@@ -156,6 +166,11 @@ function OnFrame()
 	
 	drawHUD();
 	
+	if (keypressed(VK_TAB)) {
+		drawScoreBoard();
+	}
+	
+	ConsoleFinish();
 	ShowCursor(false);
 	SetCursorPos(0.5, 0.5);
 	
