@@ -101,7 +101,7 @@ function Enemy::update()
 					weap = WEAP_RAILGUN_TYPE;
 					bull_idx = i - ROCKET_BULLETS;
 				}
-				var pdu = network.craftHitPDU(id, weap, bull_idx, bullets[i].uid);
+				var pdu = network.craftHitPDU(id, weap, bull_idx);
 				network.sendPDU(pdu);
 			}
 		}
@@ -138,6 +138,8 @@ function Enemy::setBullet(idx, pos, dir, life, uid)
 			
 		bullets[idx] = Bullet();
 		bullets[idx].init(btype, pos, dir, level, network);
+		// Enforce the position (should be absolute, init computed it w.r.t player feet)
+		bullets[idx].position = pos; 
 		// Enforce the UID
 		bullets[idx].uid = uid;
 		last_uid[idx] = uid;
