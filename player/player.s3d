@@ -329,6 +329,11 @@ function Player::update()
 	// Check if turning, and recompute angle accordingly
 	angle_h = (angle_h - SWAT_TURN_RATE * mouse_dx) % TWO_PI;
 	angle_v = (angle_v - SWAT_TURN_RATE * mouse_dy) % TWO_PI;
+	if (angle_v > 1.0)
+		angle_v = 1.0;
+	else if (angle_v < -1.0)
+		angle_v = -1.0;
+
 	if (mouse_dx != 0)
 		has_moved = true;
 	
