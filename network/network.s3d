@@ -33,6 +33,7 @@ class NetworkManager {
 	craftBulletPosPDU(weap, bull_idx, pos, dir, life, uid);
 	craftHitPDU(hitter, weap, bull_idx);
 	craftKillPDU(killer);
+	craftScorePDU(player, enemies);
 	sendPDU(pdu);
 	receivePDU();
 };
@@ -149,6 +150,34 @@ function NetworkManager::craftKillPDU(killer)
 	pdu[1] = host_id;
 	pdu[2] = killer;
 	
+	return pdu;
+}
+
+/* Create a PDU to share your scoreboard to synchronize it with the other players 
+ * [0]-typePDU, [1]-sender, [2+2*i]-player_i_kills, [3+2*i]-player_i_deaths
+ */
+function NetworkManager::craftScorePDU(myplayer, enemies)
+{
+	var pdu = vector(2 + 2*len(enemies));
+	
+	pdu[0] = SCORE_PDU;
+	pdu[1] = host_id;
+	for (var i=0; i<len(enemies); i++) {
+		if (i == host_id) {
+			// my score
+			pdu[2*i+2] = myplayer.kills;
+			pdu[2*i+3] = myplayer.deaths;
+			
+		} else if (enemies[i].active) {
+			// enemies score
+			pdu[2*i+2] = enemies[i].kills;
+			pdu[2*i+3] = enemies[i].deaths;
+		} else {
+			// mark as empty
+			pdu[2*i+2] = -1;
+			pdu[2*i+3] = -1;
+		}
+	}
 	return pdu;
 }
 

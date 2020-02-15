@@ -13,8 +13,10 @@ class Enemy {
 	// graphics
 	var lower_mesh;
 	var upper_mesh;
+	var weap_mesh;
 	var lower_obj;
 	var upper_obj;
+	var weap_obj;
 	var obj;
 	
 	// collision detection
@@ -61,13 +63,17 @@ function Enemy::init(enemy_id, act, p, a, s, pl, lvl, net)
 	var sf = lower_mesh.normalize(1);
 	upper_mesh = CVmNewMesh("swat_upper.aam");
 	upper_mesh.scale(sf);
+	weap_mesh = CVmNewMesh("rocketl.AAM");
+	weap_mesh.scale(sf);
 	
 	lower_obj = CVmObj(lower_mesh);
 	upper_obj = CVmObj(upper_mesh);
+	weap_obj = CVmObj(weap_mesh);
 	obj = CVmObj();
 	obj.addchild(upper_obj);
 	obj.addchild(lower_obj);
-	// TODO add weapon mesh
+	obj.addchild(weap_obj);
+
 	obj.SetPosition(pos);
 	obj.SetRotation(angle);
 }

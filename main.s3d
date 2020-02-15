@@ -16,6 +16,7 @@
 #define N_PLAYERS	 	8
 #define N_ENEMIES 		(N_PLAYERS-1)
 
+#define SCORE_PDU_PERIOD  1000
 
 
 // Global scene parameters
@@ -111,6 +112,20 @@ function drawScoreBoard()
 }
 
 
+/* Periodically send update PDUs to the other hosts. */
+function sendPeriodicalUpdates()
+{
+	static var last_score_update = 0;
+	var t = getTime();
+	
+	if (t - last_score_update > SCORE_PDU_PERIOD) {
+		var sc_pdu = myNetwork.craftScorePDU(myPlayer, enemies);
+		myNetwork.sendPDU(sc_pdu);
+		last_score_update = t;
+	}
+}
+
+
 /* onDownload() is performed at the beginning and downloads the files needed
  * by the application.
  */
@@ -171,6 +186,9 @@ function OnFrame()
 	if (keypressed(VK_ESCAPE)) {
 		CVmWebBrowser().Quit();
 	}
+	
+	// Send periodical updates
+	sendPeriodicalUpdates();
 	
 	updateCamera();
 	SceneBegin();
@@ -274,8 +292,10 @@ function OnTimer()
 		if(pdu[0] == SCORE_PDU)	{
 			var player_id = pdu[1];
 			for (var i=0; i<N_PLAYERS; i++){
-				enemies[i].tryIncrementKills(pdu[2+2*i]);
-				enemies[i].tryIncrementDeaths(pdu[3+2*i]);
+				if ((i != MY_PLAYER_ID) && (enemies[i].active)) {
+					enemies[i].tryIncrementKills(pdu[2+2*i]);
+					enemies[i].tryIncrementDeaths(pdu[3+2*i]);	
+				}
 			}
 		}
 	}
