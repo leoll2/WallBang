@@ -47,6 +47,7 @@ class Weapon
 	var network;
 	
 	init(type, pos, dir, sf, lvl, net);
+	resetBullets();
 	getObject();
 	drawEffects();
 	fire();
@@ -68,18 +69,7 @@ function Weapon::init(tp, pos, dir, sf, lvl, net)
 	lev = lvl;
 	network = net;
 	
-	if (type == WEAP_ROCKET_TYPE)
-		magazine_size = ROCKET_BULLETS;
-	else
-		magazine_size = RAILGUN_BULLETS;
-	
-	bullets = Array(magazine_size);
-	for (var i=0; i < magazine_size; i++)
-		bullets[i] = null;
-	bullets_left = magazine_size;
-	n_fired = 0;
-	trigger_cd = 0;
-	reload_cd = 0;
+	resetBullets();
 	
 	if (type == WEAP_ROCKET_TYPE) {
 		mesh = CVmNewMesh("rocketl.AAM");
@@ -94,6 +84,26 @@ function Weapon::init(tp, pos, dir, sf, lvl, net)
 	
 	jam_fx = CVmVRAWAV("jam.wav");
 	reload_fx = CVmVRAWAV("reload_rifle.wav");
+}
+
+
+/* Completely reset the weapon, that is cancel all the bullets 
+ * and reload the magazine.
+ */
+function Weapon::resetBullets()
+{
+	if (type == WEAP_ROCKET_TYPE)
+		magazine_size = ROCKET_BULLETS;
+	else
+		magazine_size = RAILGUN_BULLETS;
+	
+	bullets = Array(magazine_size);
+	for (var i=0; i < magazine_size; i++)
+		bullets[i] = null;
+	bullets_left = magazine_size;
+	n_fired = 0;
+	trigger_cd = 0;
+	reload_cd = 0;
 }
 
 

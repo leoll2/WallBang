@@ -267,9 +267,6 @@ function Player::handleHitTarget(weap, bull_idx)
 		rocket_launcher.removeBullet(bull_idx);
 	else
 		railgun.removeBullet(bull_idx);
-
-	// Increment the kill
-	incrementKills();
 }
 
 
@@ -303,15 +300,19 @@ function Player::respawn()
 	is_jumping = false;
 	prev_time = getTime();
 	hp = SWAT_HEALTH_POINTS;
+	rocket_launcher.resetBullets();
+	railgun.resetBullets();
 	curr_weapon = rocket_launcher;
 	curr_weapon_idx = WEAP_ROCKET_TYPE;
 	change_weapon_cd = 0;
 	current_frame = SWAT_START_WALK;
 	
 	// TODO add respawn cooldown here or elsewhere
-	// TODO reload weapons
 	
 	obj.SetPosition(position);
+	
+	var pos_pdu = network.craftPlayerPosPDU(position, angle_h);
+	network.sendPDU(pos_pdu);
 }
 
 

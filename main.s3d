@@ -185,6 +185,7 @@ function OnFrame()
 		}
 	}
 	if (myPlayer.hp <= 0) {
+		myPlayer.incrementDeaths();
 		myPlayer.notifyDeath();
 		myPlayer.respawn();
 	}
