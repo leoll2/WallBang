@@ -295,6 +295,9 @@ function OnTimer()
 				if ((i != MY_PLAYER_ID) && (enemies[i].active)) {
 					enemies[i].tryIncrementKills(pdu[2+2*i]);
 					enemies[i].tryIncrementDeaths(pdu[3+2*i]);	
+				} else if (i == MY_PLAYER_ID) {
+					myPlayer.tryIncrementKills(pdu[2+2*i]);
+					myPlayer.tryIncrementDeaths(pdu[3+2*i]);
 				}
 			}
 		}

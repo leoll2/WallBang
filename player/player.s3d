@@ -79,6 +79,8 @@ class Player {
 	isReloading();
 	incrementKills();
 	incrementDeaths();
+	tryIncrementKills(new_kills);
+	tryIncrementDeaths(new_deaths);
 	handleHitTarget(weap, bull_idx);
 	notifyHit(id, w, b_idx);
 	notifyDeath();
@@ -256,6 +258,20 @@ function Player::incrementKills()
 function Player::incrementDeaths()
 {
 	deaths += 1;
+}
+
+
+function Player::tryIncrementKills(new_kills)
+{
+	if (new_kills > kills)
+		kills = new_kills;
+}
+
+
+function Player::tryIncrementDeaths(new_deaths)
+{
+	if (new_deaths > deaths)
+		deaths = new_deaths;
 }
 
 
