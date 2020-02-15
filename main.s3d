@@ -260,11 +260,11 @@ function OnTimer()
 		if (pdu[0] == KILL_PDU) {
 			var killed = pdu[1];
 			var killer = pdu[2];
-			enemies[killed].tryIncrementDeaths();
+			enemies[killed].incrementDeaths();
 			if (killer == MY_PLAYER_ID) {
 				myPlayer.incrementKills();
 			} else {
-				enemies[killer].tryIncrementKills();
+				enemies[killer].incrementKills();
 			}
 		}
 		
