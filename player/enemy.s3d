@@ -7,6 +7,8 @@ class Enemy {
 	var score;
 	var bullets;
 	var last_uid;
+	var kills;
+	var deaths;
 	
 	// graphics
 	var lower_mesh;
@@ -28,8 +30,10 @@ class Enemy {
 	changePosition(new_pos, new_angle);
 	setRotation(angle);
 	setBullet(idx, pos, dir, life, uid);
-	IncrementScore();
-	tryIncrementScore(new_score);
+	IncrementKills();
+	incrementDeaths();
+	tryIncrementKills(new_kills);
+	tryIncrementDeaths(new_deaths);
 };
 
 
@@ -43,6 +47,8 @@ function Enemy::init(enemy_id, act, p, a, s, pl, lvl, net)
 	my_player = pl; 
 	level = lvl;
 	network = net;
+	kills = 0;
+	deaths = 0;
 	
 	bullets = array(N_BULLETS_PLAYER);
 	last_uid = array(N_BULLETS_PLAYER);
@@ -91,18 +97,24 @@ function Enemy::update()
 			}
 			if (b_life_res == -1) {
 				// the bullet hit my player
-				var weap, bull_idx;
+				var weap, bull_idx, damage;
 				outputln("My player was hit!!");
-				// TODO apply human damage or area
 				if (i < ROCKET_BULLETS) {
 					weap = WEAP_ROCKET_TYPE;
 					bull_idx = i;
+					damage = ROCKET_DMG;
 				} else {
 					weap = WEAP_RAILGUN_TYPE;
 					bull_idx = i - ROCKET_BULLETS;
+					damage = RAILGUN_DMG;
 				}
-				var pdu = network.craftHitPDU(id, weap, bull_idx);
-				network.sendPDU(pdu);
+				// Apply damage and check if the player was killed
+				if ((my_player.hp > 0) && (my_player.hp - damage <= 0))
+					my_player.killer = id;
+				my_player.hp -= damage;
+				
+				// Tell others my player was hit
+				my_player.notifyHit(id, weap, bull_idx);
 			}
 		}
 	}
@@ -154,14 +166,27 @@ function Enemy::setBullet(idx, pos, dir, life, uid)
 }
 
 
-function Enemy::incrementScore()
+function Enemy::incrementKills()
 {
-	score += 1;
+	kills += 1;
 }
 
 
-function Enemy::tryIncrementScore(new_score)
+function Enemy::incrementDeaths()
 {
-	if (new_score > score)
-		score = new_score;
+	deaths += 1;
+}
+
+
+function Enemy::tryIncrementKills(new_kills)
+{
+	if (new_kills > kills)
+		kills = new_kills;
+}
+
+
+function Enemy::tryIncrementDeaths(new_deaths)
+{
+	if (new_deaths > deaths)
+		deaths = new_deaths;
 }

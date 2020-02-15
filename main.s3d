@@ -20,7 +20,7 @@
 
 // Global scene parameters
 SET SCENE_FOV  = 60;
-SET SCENE_NEAR = 0.5;
+SET SCENE_NEAR = 0.3;
 SET SCENE_FAR  = 200;
 
 // Camera globals
@@ -66,7 +66,7 @@ function drawHUD()
 		ConsoleText(0.45,0.9, "RELOADING");
 	}
 	
-	// Draw scope
+	// Draw crosshair
 	var scope1 = [0.5, 0.48, 0.5, 0.52];
 	var scope2 = [0.485, 0.5, 0.515, 0.5];
 	ConsoleColor(1,0,0);
@@ -79,8 +79,35 @@ function drawHUD()
 /* Draw the overlay scoreboard */
 function drawScoreBoard()
 {
+	var offset = 0;
+	// box
 	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleFilledRect(0.24, 0.76, 0.52, 0.52);
+	ConsoleColor(0.9, 0.9, 0.9);
 	ConsoleFilledRect(0.25, 0.75, 0.5, 0.5);
+	// header
+	ConsoleFont("Impact", 20);
+	ConsoleColor(0.0, 0.0, 0.0);
+	ConsoleText(0.3, 0.7, "Player ID");
+	ConsoleText(0.55, 0.7, "K");
+	ConsoleText(0.65, 0.7, "D");
+	// scores
+	ConsoleFont("Impact", 16);
+	for (var i=0; i<N_PLAYERS; i++) {
+		if (enemies[i].active) {
+			ConsoleColor(0.0, 0.0, 0.0);
+			ConsoleText(0.3, 0.62 - offset, str(i));
+			ConsoleText(0.55, 0.62 - offset, str(enemies[i].kills));
+			ConsoleText(0.65, 0.62 - offset, str(enemies[i].deaths));
+			offset += 0.05;
+		} else if (i == MY_PLAYER_ID) {
+			ConsoleColor(1.0, 0.0, 0.0);
+			ConsoleText(0.3, 0.62 - offset, str(i));
+			ConsoleText(0.55, 0.62 - offset, str(myPlayer.kills));
+			ConsoleText(0.65, 0.62 - offset, str(myPlayer.deaths));
+			offset += 0.05;
+		}
+	}
 }
 
 
@@ -145,27 +172,25 @@ function OnFrame()
 		CVmWebBrowser().Quit();
 	}
 	
-	// Update the camera
 	updateCamera();
-
 	SceneBegin();
-
 	//DrawGrid([0.5, 0.5, 0.5], 100);
-	
 	myPlayer.update();
-	
-	// Draw the map and the active players
 	myLevel.draw();
-	myPlayer.draw();
+
 	for (var i=0; i<N_PLAYERS; i++) {
 		if (enemies[i].active) {
 			enemies[i].update();
 			enemies[i].draw();	
 		}
 	}
+	if (myPlayer.hp <= 0) {
+		myPlayer.notifyDeath();
+		myPlayer.respawn();
+	}
+	myPlayer.draw();
 	
 	drawHUD();
-	
 	if (keypressed(VK_TAB)) {
 		drawScoreBoard();
 	}
@@ -225,19 +250,31 @@ function OnTimer()
 			var bull_idx = pdu[4];
 			if (hitter_id == MY_PLAYER_ID) {
 				myPlayer.handleHitTarget(weap, bull_idx);
-				myPlayer.incrementScore();	// TODo mettere nellla prec
 			} else {
-				enemies[hitter_id].incrementScore();
 				enemies[hitter_id].bullets[weap*ROCKET_BULLETS + bull_idx] = null;
 			}
 		}
 		
+		// Kill notification:
+		// [0]-typePDU, [1]-killed, [2]-killer
+		if (pdu[0] == KILL_PDU) {
+			var killed = pdu[1];
+			var killer = pdu[2];
+			enemies[killed].tryIncrementDeaths();
+			if (killer == MY_PLAYER_ID) {
+				myPlayer.incrementKills();
+			} else {
+				enemies[killer].tryIncrementKills();
+			}
+		}
+		
 		// Score update:
-		// [0]-typePDU, [1]-sender, [2..N_PLAYERS+1]-score
+		// [0]-typePDU, [1]-sender, [2+2*i]-player_i_kills, [3+2*i]-player_i_deaths
 		if(pdu[0] == SCORE_PDU)	{
 			var player_id = pdu[1];
 			for (var i=0; i<N_PLAYERS; i++){
-				enemies[i].tryIncrementScore(pdu[2+i]);
+				enemies[i].tryIncrementKills(pdu[2+2*i]);
+				enemies[i].tryIncrementDeaths(pdu[3+2*i]);
 			}
 		}
 	}
@@ -273,7 +310,9 @@ function updateCamera()
 	}
 	
 	if (camType == CAM_FPV) {
-		CameraGetCurrent().SetPosition(myPlayer.getPosition() + [0,1.7,0]);
+		myPlayer.obj.hide();
+		// set the camera position slightly behind the head to avoid see-through walls effect
+		CameraGetCurrent().SetPosition(myPlayer.getPosition() + [0,1.5,0] - 0.25*myPlayer.getDirection());
 		CameraGetCurrent().SetDirection(myPlayer.getDirection());
 	}
 }

@@ -5,12 +5,14 @@
 #include <network/network.s3d>
 #include <weapons/bullet_class.s3d>
 
-#define WEAP_ROCKET_TYPE	0
-#define WEAP_RAILGUN_TYPE 	1
-#define ROCKET_BULLETS 		3
-#define RAILGUN_BULLETS 	20
-#define TRIGGER_COOLDOWN 	25
-#define RELOAD_COOLDOWN 	200
+#define WEAP_ROCKET_TYPE    0
+#define WEAP_RAILGUN_TYPE   1
+#define ROCKET_BULLETS      3
+#define RAILGUN_BULLETS     20
+#define ROCKET_DMG          5
+#define RAILGUN_DMG         1
+#define TRIGGER_COOLDOWN    25
+#define RELOAD_COOLDOWN     200
 
 
 class Weapon 

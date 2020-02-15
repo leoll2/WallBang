@@ -3,16 +3,17 @@
 
 #define TWO_PI 		6.283185
 
-#define SWAT_START_WALK 	16
-#define SWAT_END_WALK 		48
-#define SWAT_STEP			0.004
-#define SWAT_FRAME_STEP 	0.5
-#define SWAT_TURN_RATE 		0.01
+#define SWAT_START_WALK     16
+#define SWAT_END_WALK       48
+#define SWAT_STEP           0.004
+#define SWAT_FRAME_STEP     0.5
+#define SWAT_TURN_RATE 	    0.01
 #define SWAT_BACKSTEP_SLOW  0.8
 #define SWAT_JUMP_SPEED     1.0
-#define SWAT_HITBOX_RADIUS	0.3
-#define CHANGE_WEAPON_COOLDOWN 	100
-#define N_BULLETS_PLAYER	(ROCKET_BULLETS + RAILGUN_BULLETS)
+#define SWAT_HITBOX_RADIUS  0.3
+#define SWAT_HEALTH_POINTS  10
+#define CHANGE_WEAPON_COOLDOWN  100
+#define N_BULLETS_PLAYER   (ROCKET_BULLETS + RAILGUN_BULLETS)
 
 class Player {
 	
@@ -57,8 +58,10 @@ class Player {
 	var level;
 	
 	// game
+	var hp;
 	var kills;
 	var deaths;
+	var killer;
 	
 	// multiplayer
 	var network;
@@ -77,6 +80,9 @@ class Player {
 	incrementKills();
 	incrementDeaths();
 	handleHitTarget(weap, bull_idx);
+	notifyHit(id, w, b_idx);
+	notifyDeath();
+	respawn();
 	draw();
 	update();
 };
@@ -119,8 +125,10 @@ function Player::init(pos, dir, col, lvl, net)
 	curr_weapon_idx = WEAP_ROCKET_TYPE;
 	change_weapon_cd = 0;
 	
+	hp = SWAT_HEALTH_POINTS;
 	kills = 0;
 	deaths = 0;
+	killer = null;
 	
 	obj = CVmObj();
 	obj.addchild(upper_obj);
@@ -265,6 +273,48 @@ function Player::handleHitTarget(weap, bull_idx)
 }
 
 
+/* Send a notify to the other players about you being hit */
+function Player::notifyHit(id, w, b_idx)
+{
+	var pdu = network.craftHitPDU(id, w, b_idx);
+	network.sendPDU(pdu);
+}
+
+
+/* Send a notify to the other players about your death */
+function Player::notifyDeath()
+{
+	var pdu = network.craftKillPDU(killer);
+	network.sendPDU(pdu);
+}
+
+
+/* Respawn in a random position */
+function Player::respawn()
+{
+	var respawn_pos = level.getRandomFloorPosition();
+	var respawn_dir = level.getNonWallDirection(respawn_pos);
+	
+	position = respawn_pos;
+	direction = respawn_dir;
+	angle_h = atan2(respawn_dir.x, respawn_dir.z) % TWO_PI;
+	angle_v = 0;
+	v_y = 0;
+	is_jumping = false;
+	prev_time = getTime();
+	hp = SWAT_HEALTH_POINTS;
+	curr_weapon = rocket_launcher;
+	curr_weapon_idx = WEAP_ROCKET_TYPE;
+	change_weapon_cd = 0;
+	current_frame = SWAT_START_WALK;
+	
+	// TODO add respawn cooldown here or elsewhere
+	// TODO reload weapons
+	
+	obj.SetPosition(position);
+}
+
+
 /* Update the soldier state */
 function Player::update()
 {
@@ -319,7 +369,6 @@ function Player::update()
 	
 	// Check if jumping
 	if (keypressed(VK_SPACE) && (!is_jumping)) {
-		outputln("jump");
 		has_moved = true;
 		is_jumping = true;
 		v_y = SWAT_JUMP_SPEED;
@@ -332,7 +381,6 @@ function Player::update()
 	
 	// Collision detection (fix movement if hitting a wall)
 	var coll_code = level.detectCollision(position, hitbox_rad);
-	//outputln(coll_code);
 	if (coll_code & 32 != 0) {
 		// When hitting a corner, consider the two axes separately.
 		// Moving along each axis is allowed only if the direction is not
@@ -360,13 +408,11 @@ function Player::update()
 		// If hitting a horizontal surface, cancel the vertical speed and fix the position
 		var point_h = level.level_matrix[int(position.z)][int(position.x)];
 		if (position.y < point_h) {
-			//outputln("setting height from " + str(position.y) + " to " + str(point_h));
 			if (point_h - position.y > 1.0) {
 				// attempt to climb a definitely too high wall
 				var delta_pos = Norm(position.x_z - old_position.x_z);
 				position -= delta_pos;
 				position.y = level.level_matrix[int(position.z)][int(position.x)];
-				outputln(delta_pos);
 				is_jumping = false;
 			} else {
 				// just a typical "slightly below the floor" due to gravity, or a small successful leap

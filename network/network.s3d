@@ -10,6 +10,7 @@
 #define POSITION_PDU 	1
 #define BULLET_PDU 		2
 #define HIT_PDU 		3
+#define KILL_PDU 		4
 #define SCORE_PDU  		6
 
 
@@ -31,6 +32,7 @@ class NetworkManager {
 	craftPlayerPosPDU(pos, angle);
 	craftBulletPosPDU(weap, bull_idx, pos, dir, life, uid);
 	craftHitPDU(hitter, weap, bull_idx);
+	craftKillPDU(killer);
 	sendPDU(pdu);
 	receivePDU();
 };
@@ -131,6 +133,21 @@ function NetworkManager::craftHitPDU(hitter, weap, bull_idx)
 	pdu[2] = hitter;
 	pdu[3] = weap;
 	pdu[4] = bull_idx;
+	
+	return pdu;
+}
+
+
+/* Create a PDU to notify the other players about your death.
+ * [0]-typePDU, [1]-killed, [2]-killer
+ */
+function NetworkManager::craftKillPDU(killer)
+{
+	var pdu = vector(3);
+	
+	pdu[0] = KILL_PDU;
+	pdu[1] = host_id;
+	pdu[2] = killer;
 	
 	return pdu;
 }
