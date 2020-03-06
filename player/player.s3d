@@ -75,6 +75,7 @@ class Player {
 	setRotation(angle);
 	shoot();
 	changeWeapon();
+	getHP();
 	getRemainingShots();
 	getMagazineSize();
 	hasMoved();
@@ -209,6 +210,13 @@ function Player::changeWeapon()
 	}
 	
 	obj.AddChild(curr_weapon.getObject());
+}
+
+
+/* Get the player life points */
+function Player::getHP()
+{
+	return hp;
 }
 
 

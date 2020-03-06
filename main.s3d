@@ -51,14 +51,35 @@ function updateCamera();
 function DrawGrid(col, size);
 
 
+/* Draw the player health bar */
+function drawHPBar(hp, max_hp)
+{
+	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleFilledRect(0.05, 0.1, 0.15, 0.05);
+	ConsoleText(0.21, 0.06, "HP");
+	ConsoleColor(0, 0, 0);
+	ConsoleFilledRect(0.06, 0.09, 0.13, 0.03);
+	
+	if (1.0*hp/max_hp <= 0.25)
+		ConsoleColor(1, 0, 0);	// red
+	else if (1.0*hp/max_hp < 0.5)
+		ConsoleColor(1, 1, 0);  // yellow
+	else
+		ConsoleColor(1, 1, 1);  // white
+		
+	ConsoleFilledRect(0.06, 0.09, 0.13*hp/max_hp, 0.03);
+}
+
+
 /* Draw the HUD and secondary information */
 function drawHUD(t_respawn_left)
 {
 	// Show stats
 	ConsoleFont("Impact", 20);
 	ConsoleColor(0.4, 0.6, 1.0);
-	ConsoleText(0.05, 0.1, "Ammo:    " + str(myPlayer.getRemainingShots()) + "/" + str(myPlayer.getMagazineSize()));
-	ConsoleText(0.05, 0.05, "K/D:  " + str(myPlayer.kills) + "/" + str(myPlayer.deaths));
+	ConsoleText(0.05, 0.17, "Ammo:    " + str(myPlayer.getRemainingShots()) + "/" + str(myPlayer.getMagazineSize()));
+	ConsoleText(0.05, 0.12, "K/D:  " + str(myPlayer.kills) + "/" + str(myPlayer.deaths));
+	drawHPBar(myPlayer.getHP(), SWAT_HEALTH_POINTS);
 	
 	// Show notifications
 	if (myPlayer.isReloading()) {
@@ -75,7 +96,12 @@ function drawHUD(t_respawn_left)
 	ConsoleLines(scope1);
 	ConsoleLines(scope2);
 	
+	// Show respawn interface
 	if (t_respawn_left >= 0) {
+		// Grey-out the background
+		ConsoleColor(0.5, 0.5, 0.5, 0.6);
+		ConsoleFilledRect(0, 1, 1, 1);
+		// Respawn time counter
 		ConsoleFont("Impact", 100);
 		ConsoleColor(0.4, 0.6, 1.0);
 		ConsoleText(0.45,0.5, str(t_respawn_left / 1000));
