@@ -297,6 +297,7 @@ function OnFrame()
 			}
 		}
 		if (myPlayer.hp <= 0) {
+			enemies[myPlayer.killer].incrementKills();
 			myPlayer.incrementDeaths();
 			myPlayer.notifyDeath();
 			myPlayer.respawn();
