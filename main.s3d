@@ -16,7 +16,8 @@
 #define N_PLAYERS	 	8
 #define N_ENEMIES 		(N_PLAYERS-1)
 
-#define SCORE_PDU_PERIOD  1000
+#define MAX_PDU_PER_TICK      10
+#define SCORE_PDU_PERIOD      1000
 
 
 // Global scene parameters
@@ -45,10 +46,52 @@ var start_fx;
 // Network
 var myNetwork;
 
+// Game
+var game_started;
+
 // Function declarations
 function initCamera(type, pos, dir);
 function updateCamera();
-function DrawGrid(col, size);
+function drawGrid(col, size);
+function enterGame();
+
+
+/* Show the initial menu */
+function showMenu()
+{
+	ConsoleFont("Impact", 35);
+	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleText(0.4, 0.85, "WallBang");
+	ConsoleFont("Roboto", 20);
+	ConsoleText(0.35, 0.78, "Multiplayer FPS game");
+	
+	// Show instructions
+	ConsoleFont("Verdana", 12);
+	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleText(0.05, 0.35, "[W A S D]");
+	ConsoleText(0.05, 0.3,"[MouseL]");
+	ConsoleText(0.05, 0.25, "[C]");
+	ConsoleText(0.05, 0.2,"[Space]");
+	ConsoleText(0.05, 0.15, "[Shift]");
+	ConsoleText(0.05, 0.1, "[ESC]");
+	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleText(0.2, 0.35, "move");
+	ConsoleText(0.2, 0.3,"shoot");
+	ConsoleText(0.2, 0.25, "weapon");
+	ConsoleText(0.2, 0.2,"jump");
+	ConsoleText(0.2, 0.15, "run");
+	ConsoleText(0.2, 0.1,"quit");
+	
+	// Press spacebar
+	ConsoleFont("Impact", 25);
+	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleText(0.25, 0.45, "Press SPACEBAR to start playing");
+	if (keypressed(VK_SPACE)) {
+		enterGame();
+	} else if (keypressed(VK_ESCAPE)) {
+		CVmWebBrowser().Quit();
+	}
+}
 
 
 /* Draw the player health bar */
@@ -158,19 +201,10 @@ function sendPeriodicalUpdates()
 }
 
 
-/* onDownload() is performed at the beginning and downloads the files needed
- * by the application.
- */
-function OnDownload()
+/* Start playing (game initialization) */
+function enterGame()
 {
-	FileDownload("resources.zip");
-}
-
-
-/* onInit() is called after onDownload() and performs the initialization routine */
-function OnInit(params)
-{
-	outputln("Initializing the game...");
+	outputln("Preparing the field...");
 	
 	// Initialize light
 	Light0 = CVmLight();
@@ -205,7 +239,25 @@ function OnInit(params)
 	
 	start_fx = CVmVRAWAV("start.wav");
 	start_fx.play();
-	outputln("Ready to play!");
+
+	game_started = true;
+	outputln("Fight!");
+}
+
+
+/* onDownload() is performed at the beginning and downloads the files needed
+ * by the application.
+ */
+function OnDownload()
+{
+	FileDownload("resources.zip");
+}
+
+
+/* onInit() is called after onDownload() and performs the initialization routine */
+function OnInit(params)
+{
+	game_started = false;
 }
 
 
@@ -214,50 +266,54 @@ function OnInit(params)
  */
 function OnFrame()
 {	
-	var t = getTime();
-	var t_respawn_left = myPlayer.respawn_time - t;
-	
-	// Check if should quit the application
-	if (keypressed(VK_ESCAPE)) {
-		CVmWebBrowser().Quit();
-	}
-	
-	// Send periodical updates
-	sendPeriodicalUpdates();
-	
-	updateCamera();
-	SceneBegin();
-	//DrawGrid([0.5, 0.5, 0.5], 100);
-	
-	if (t_respawn_left <= 0)
-		myPlayer.update();
-
-	myLevel.draw();
-
-	for (var i=0; i<N_PLAYERS; i++) {
-		if (enemies[i].active) {
-			enemies[i].update();
-			enemies[i].draw();	
+	if (!game_started){
+		showMenu();
+	} else {
+		var t = getTime();
+		var t_respawn_left = myPlayer.respawn_time - t;
+		
+		// Check if should quit the application
+		if (keypressed(VK_ESCAPE)) {
+			CVmWebBrowser().Quit();
 		}
-	}
-	if (myPlayer.hp <= 0) {
-		myPlayer.incrementDeaths();
-		myPlayer.notifyDeath();
-		myPlayer.respawn();
-	}
-	if (t_respawn_left <= 0)
-		myPlayer.draw();
+		
+		// Send periodical updates
+		sendPeriodicalUpdates();
+		
+		updateCamera();
+		SceneBegin();
+		//drawGrid([0.5, 0.5, 0.5], 100);
+		
+		if (t_respawn_left <= 0)
+			myPlayer.update();
 	
-	drawHUD(t_respawn_left);
-	if (keypressed(VK_TAB)) {
-		drawScoreBoard();
+		myLevel.draw();
+	
+		for (var i=0; i<N_PLAYERS; i++) {
+			if (enemies[i].active) {
+				enemies[i].update();
+				enemies[i].draw();	
+			}
+		}
+		if (myPlayer.hp <= 0) {
+			myPlayer.incrementDeaths();
+			myPlayer.notifyDeath();
+			myPlayer.respawn();
+		}
+		if (t_respawn_left <= 0)
+			myPlayer.draw();
+		
+		drawHUD(t_respawn_left);
+		if (keypressed(VK_TAB)) {
+			drawScoreBoard();
+		}
+		
+		ConsoleFinish();
+		ShowCursor(false);
+		SetCursorPos(0.5, 0.5);
+		
+		SceneEnd();
 	}
-	
-	ConsoleFinish();
-	ShowCursor(false);
-	SetCursorPos(0.5, 0.5);
-	
-	SceneEnd();
 }
 
 
@@ -271,76 +327,84 @@ function DownloadReady(RequestID) {}
 function OnTimer() 
 {
 	var pdu;
+	var recv_iter = 0;
+
+	if (!game_started)
+		return;
 	
-	// Try to acquire a PDU 
-	pdu = myNetwork.receivePDU();
-	
-	// Handle the PDU, if any
-	if (pdu != null) {
+	for (recv_iter; recv_iter < MAX_PDU_PER_TICK; recv_iter++) {
+		// Try to acquire a PDU 
+		pdu = myNetwork.receivePDU();
 		
-		// Position update:
-		// [0]-typePDU, [1]-sender, [2,3,4]-posXYZ, [5]-angle, [6]-visible/hidden, [7]-animFrame
-		if (pdu[0] == POSITION_PDU) {
-			var player_id = pdu[1];
-			enemies[player_id].active = true;
-			enemies[player_id].changePosition([pdu[2], pdu[3], pdu[4]], pdu[5], pdu[6], pdu[7]);
-		}
-		
-		// Bullet update:
-		// [0]-typePDU, [1]-sender, [2]-weapon, [3]-bull_idx, [4,5,6]-posXYZ, [7,8,9]-dirXYZ, [10]-life, [11]-uniqueID
-		if (pdu[0] == BULLET_PDU) {
-			var player_id = pdu[1];
-			enemies[player_id].setBullet(
-					pdu[2]*ROCKET_BULLETS + pdu[3], 
-					[pdu[4], pdu[5], pdu[6]],
-					[pdu[7], pdu[8], pdu[9]],
-					pdu[10],
-					pdu[11]
-			);
-		}
-		
-		// Bullet hit notification:
-		// [0]-typePDU, [1]-player_hit, [2]-hitter, [3]-weapon, [4]-bull_idx
-		if (pdu[0] == HIT_PDU) {
-			var player_hit_id = pdu[1];
-			var hitter_id = pdu[2];
-			var weap = pdu[3];
-			var bull_idx = pdu[4];
-			if (hitter_id == MY_PLAYER_ID) {
-				myPlayer.handleHitTarget(weap, bull_idx);
-			} else {
-				enemies[hitter_id].bullets[weap*ROCKET_BULLETS + bull_idx] = null;
+		// Handle the PDU, if any
+		if (pdu != null) {
+			
+			// Position update:
+			// [0]-typePDU, [1]-sender, [2,3,4]-posXYZ, [5]-angle, [6]-visible/hidden, [7]-animFrame
+			if (pdu[0] == POSITION_PDU) {
+				var player_id = pdu[1];
+				enemies[player_id].active = true;
+				enemies[player_id].changePosition([pdu[2], pdu[3], pdu[4]], pdu[5], pdu[6], pdu[7]);
 			}
-		}
-		
-		// Kill notification:
-		// [0]-typePDU, [1]-killed, [2]-killer
-		if (pdu[0] == KILL_PDU) {
-			var killed = pdu[1];
-			var killer = pdu[2];
-			enemies[killed].incrementDeaths();
-			if (killer == MY_PLAYER_ID) {
-				myPlayer.incrementKills();
-			} else {
-				enemies[killer].incrementKills();
+			
+			// Bullet update:
+			// [0]-typePDU, [1]-sender, [2]-weapon, [3]-bull_idx, [4,5,6]-posXYZ, [7,8,9]-dirXYZ, [10]-life, [11]-uniqueID
+			if (pdu[0] == BULLET_PDU) {
+				var player_id = pdu[1];
+				enemies[player_id].setBullet(
+						pdu[2]*ROCKET_BULLETS + pdu[3], 
+						[pdu[4], pdu[5], pdu[6]],
+						[pdu[7], pdu[8], pdu[9]],
+						pdu[10],
+						pdu[11]
+				);
 			}
-		}
-		
-		// Score update:
-		// [0]-typePDU, [1]-sender, [2+2*i]-player_i_kills, [3+2*i]-player_i_deaths
-		if(pdu[0] == SCORE_PDU)	{
-			var player_id = pdu[1];
-			for (var i=0; i<N_PLAYERS; i++){
-				if ((i != MY_PLAYER_ID) && (enemies[i].active)) {
-					enemies[i].tryIncrementKills(pdu[2+2*i]);
-					enemies[i].tryIncrementDeaths(pdu[3+2*i]);	
-				} else if (i == MY_PLAYER_ID) {
-					myPlayer.tryIncrementKills(pdu[2+2*i]);
-					myPlayer.tryIncrementDeaths(pdu[3+2*i]);
+			
+			// Bullet hit notification:
+			// [0]-typePDU, [1]-player_hit, [2]-hitter, [3]-weapon, [4]-bull_idx
+			if (pdu[0] == HIT_PDU) {
+				var player_hit_id = pdu[1];
+				var hitter_id = pdu[2];
+				var weap = pdu[3];
+				var bull_idx = pdu[4];
+				if (hitter_id == MY_PLAYER_ID) {
+					myPlayer.handleHitTarget(weap, bull_idx);
+				} else {
+					enemies[hitter_id].bullets[weap*ROCKET_BULLETS + bull_idx] = null;
 				}
 			}
-		}
+			
+			// Kill notification:
+			// [0]-typePDU, [1]-killed, [2]-killer
+			if (pdu[0] == KILL_PDU) {
+				var killed = pdu[1];
+				var killer = pdu[2];
+				enemies[killed].incrementDeaths();
+				if (killer == MY_PLAYER_ID) {
+					myPlayer.incrementKills();
+				} else {
+					enemies[killer].incrementKills();
+				}
+			}
+			
+			// Score update:
+			// [0]-typePDU, [1]-sender, [2+2*i]-player_i_kills, [3+2*i]-player_i_deaths
+			if(pdu[0] == SCORE_PDU)	{
+				var player_id = pdu[1];
+				for (var i=0; i<N_PLAYERS; i++){
+					if ((i != MY_PLAYER_ID) && (enemies[i].active)) {
+						enemies[i].tryIncrementKills(pdu[2+2*i]);
+						enemies[i].tryIncrementDeaths(pdu[3+2*i]);	
+					} else if (i == MY_PLAYER_ID) {
+						myPlayer.tryIncrementKills(pdu[2+2*i]);
+						myPlayer.tryIncrementDeaths(pdu[3+2*i]);
+					}
+				}
+			}
+		} else	// no PDU pending
+			break;
 	}
+	//outputln("PDUs received within tick: " + str(recv_iter));
 }
 
 
