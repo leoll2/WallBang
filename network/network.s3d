@@ -85,7 +85,7 @@ function NetworkManager::updateOutTrafficStats(time, size)
  */
 function NetworkManager::craftPlayerPosPDU(pos, angle, visible)
 {
-	var pdu = vector(6);
+	var pdu = vector(7);
 	
 	pdu[0] = POSITION_PDU;
 	pdu[1] = host_id;
