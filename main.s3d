@@ -16,8 +16,9 @@
 #define N_PLAYERS	 	8
 #define N_ENEMIES 		(N_PLAYERS-1)
 
-#define MAX_PDU_PER_TICK      10
-#define SCORE_PDU_PERIOD      1000
+#define MAX_PDU_PER_TICK    10
+#define SCORE_PDU_PERIOD    1000
+#define PDU_LOSS_SIM_PERC 	30
 
 
 // Global scene parameters
@@ -338,6 +339,9 @@ function OnTimer()
 		
 		// Handle the PDU, if any
 		if (pdu != null) {
+			// Simulate packet loss
+			if (Rand(99) < PDU_LOSS_SIM_PERC)
+				continue;
 			
 			// Position update:
 			// [0]-typePDU, [1]-sender, [2,3,4]-posXYZ, [5]-angle, [6]-visible/hidden, [7]-animFrame
