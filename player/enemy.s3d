@@ -19,6 +19,7 @@ class Enemy {
 	var upper_obj;
 	var weap_obj;
 	var obj;
+	var anim_frame;
 	
 	// collision detection
 	var my_player;
@@ -30,7 +31,7 @@ class Enemy {
 	init(enemy_id, act, p, a, sc, pl, lvl, net);
 	draw();
 	update();
-	changePosition(new_pos, new_angle, visible);
+	changePosition(new_pos, new_angle, visible, frame);
 	setRotation(angle);
 	setBullet(idx, pos, dir, life, uid);
 	IncrementKills();
@@ -53,6 +54,7 @@ function Enemy::init(enemy_id, act, p, a, s, pl, lvl, net)
 	network = net;
 	kills = 0;
 	deaths = 0;
+	anim_frame = 1;
 	
 	bullets = array(N_BULLETS_PLAYER);
 	last_uid = array(N_BULLETS_PLAYER);
@@ -84,7 +86,7 @@ function Enemy::init(enemy_id, act, p, a, s, pl, lvl, net)
 function Enemy::draw()
 {
 	if (alive) {
-		obj.Draw(VR_FRAMENUMBER, 1);
+		obj.Draw(VR_FRAMENUMBER, anim_frame);
 		
 		for (var i=0; i<N_BULLETS_PLAYER; i++) {
 			if (bullets[i] != null) {
@@ -131,10 +133,11 @@ function Enemy::update()
 }
 
 
-function Enemy::changePosition(new_pos, new_angle, visible)
+function Enemy::changePosition(new_pos, new_angle, visible, frame)
 {
 	pos = new_pos;
 	angle = new_angle;
+	anim_frame = frame;
 	if (visible == 0)
 		alive = false;
 	else

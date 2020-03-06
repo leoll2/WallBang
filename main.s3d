@@ -279,11 +279,11 @@ function OnTimer()
 	if (pdu != null) {
 		
 		// Position update:
-		// [0]-typePDU, [1]-sender, [2,3,4]-posXYZ, [5]-angle, [6]-visible/hidden
+		// [0]-typePDU, [1]-sender, [2,3,4]-posXYZ, [5]-angle, [6]-visible/hidden, [7]-animFrame
 		if (pdu[0] == POSITION_PDU) {
 			var player_id = pdu[1];
 			enemies[player_id].active = true;
-			enemies[player_id].changePosition([pdu[2], pdu[3], pdu[4]], pdu[5], pdu[6]);
+			enemies[player_id].changePosition([pdu[2], pdu[3], pdu[4]], pdu[5], pdu[6], pdu[7]);
 		}
 		
 		// Bullet update:

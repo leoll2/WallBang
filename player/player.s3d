@@ -149,7 +149,7 @@ function Player::init(pos, dir, col, lvl, net)
 	step_fx = CVmVRAWAV("step.wav");
 	jump_fx = CVmVRAWAV("jump.wav");
 	
-	var pos_pdu = network.craftPlayerPosPDU(position, angle_h, 1);
+	var pos_pdu = network.craftPlayerPosPDU(position, angle_h, 1, current_frame);
 	network.sendPDU(pos_pdu);
 }
 
@@ -338,7 +338,7 @@ function Player::respawn()
 	
 	obj.SetPosition(position);
 	
-	var pos_pdu = network.craftPlayerPosPDU(position, angle_h, 0);
+	var pos_pdu = network.craftPlayerPosPDU(position, angle_h, 0, current_frame);
 	network.sendPDU(pos_pdu);
 }
 
@@ -478,7 +478,7 @@ function Player::update()
 		change_weapon_cd -= 1;
 		
 	if (hasMoved()) {
-		var pos_pdu = network.craftPlayerPosPDU(position, angle_h, 1);
+		var pos_pdu = network.craftPlayerPosPDU(position, angle_h, 1, current_frame);
 		network.sendPDU(pos_pdu);
 	}
 		
