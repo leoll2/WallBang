@@ -15,6 +15,7 @@
 #define CHANGE_WEAPON_COOLDOWN  100
 #define N_BULLETS_PLAYER   (ROCKET_BULLETS + RAILGUN_BULLETS)
 #define RESPAWN_CD 			3500
+#define SWAT_POS_PDU_PERIOD 1000
 
 class Player {
 	
@@ -346,6 +347,7 @@ function Player::respawn()
 /* Update the soldier state */
 function Player::update()
 {
+	static var last_pos_update = 0;
 	var old_position = position;
 	var run = 1;
 	has_moved = false;
@@ -477,9 +479,10 @@ function Player::update()
 	if (change_weapon_cd > 0)
 		change_weapon_cd -= 1;
 		
-	if (hasMoved()) {
+	if (hasMoved() || (t - last_pos_update > SWAT_POS_PDU_PERIOD)) {
 		var pos_pdu = network.craftPlayerPosPDU(position, angle_h, 1, current_frame);
 		network.sendPDU(pos_pdu);
+		last_pos_update = t;
 	}
 		
 	prev_time = t;
