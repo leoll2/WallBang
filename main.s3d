@@ -52,7 +52,7 @@ function DrawGrid(col, size);
 
 
 /* Draw the HUD and secondary information */
-function drawHUD()
+function drawHUD(t_respawn_left)
 {
 	// Show stats
 	ConsoleFont("Impact", 20);
@@ -74,6 +74,12 @@ function drawHUD()
 	ConsoleWidth(3);
 	ConsoleLines(scope1);
 	ConsoleLines(scope2);
+	
+	if (t_respawn_left >= 0) {
+		ConsoleFont("Impact", 100);
+		ConsoleColor(0.4, 0.6, 1.0);
+		ConsoleText(0.45,0.5, str(t_respawn_left / 1000));
+	}
 }
 
 
@@ -182,6 +188,9 @@ function OnInit(params)
  */
 function OnFrame()
 {	
+	var t = getTime();
+	var t_respawn_left = myPlayer.respawn_time - t;
+	
 	// Check if should quit the application
 	if (keypressed(VK_ESCAPE)) {
 		CVmWebBrowser().Quit();
@@ -193,7 +202,10 @@ function OnFrame()
 	updateCamera();
 	SceneBegin();
 	//DrawGrid([0.5, 0.5, 0.5], 100);
-	myPlayer.update();
+	
+	if (t_respawn_left <= 0)
+		myPlayer.update();
+
 	myLevel.draw();
 
 	for (var i=0; i<N_PLAYERS; i++) {
@@ -207,9 +219,10 @@ function OnFrame()
 		myPlayer.notifyDeath();
 		myPlayer.respawn();
 	}
-	myPlayer.draw();
+	if (t_respawn_left <= 0)
+		myPlayer.draw();
 	
-	drawHUD();
+	drawHUD(t_respawn_left);
 	if (keypressed(VK_TAB)) {
 		drawScoreBoard();
 	}
@@ -240,11 +253,11 @@ function OnTimer()
 	if (pdu != null) {
 		
 		// Position update:
-		// [0]-typePDU, [1]-sender, [2,3,4]-posXYZ, [5]-angle
+		// [0]-typePDU, [1]-sender, [2,3,4]-posXYZ, [5]-angle, [6]-visible/hidden
 		if (pdu[0] == POSITION_PDU) {
 			var player_id = pdu[1];
 			enemies[player_id].active = true;
-			enemies[player_id].changePosition([pdu[2], pdu[3], pdu[4]], pdu[5]);
+			enemies[player_id].changePosition([pdu[2], pdu[3], pdu[4]], pdu[5], pdu[6]);
 		}
 		
 		// Bullet update:

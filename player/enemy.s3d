@@ -2,6 +2,7 @@ class Enemy {
 	
 	var id;
 	var active;
+	var alive;
 	var pos;
 	var angle;
 	var score;
@@ -29,7 +30,7 @@ class Enemy {
 	init(enemy_id, act, p, a, sc, pl, lvl, net);
 	draw();
 	update();
-	changePosition(new_pos, new_angle);
+	changePosition(new_pos, new_angle, visible);
 	setRotation(angle);
 	setBullet(idx, pos, dir, life, uid);
 	IncrementKills();
@@ -43,6 +44,7 @@ function Enemy::init(enemy_id, act, p, a, s, pl, lvl, net)
 {
 	id = enemy_id;
 	active = act;
+	alive = true;
 	pos = p;
 	angle = a;
 	score = s;
@@ -81,11 +83,13 @@ function Enemy::init(enemy_id, act, p, a, s, pl, lvl, net)
 
 function Enemy::draw()
 {
-	obj.Draw(VR_FRAMENUMBER, 1);
-	
-	for (var i=0; i<N_BULLETS_PLAYER; i++) {
-		if (bullets[i] != null) {
-			bullets[i].draw();
+	if (alive) {
+		obj.Draw(VR_FRAMENUMBER, 1);
+		
+		for (var i=0; i<N_BULLETS_PLAYER; i++) {
+			if (bullets[i] != null) {
+				bullets[i].draw();
+			}
 		}
 	}
 }
@@ -127,10 +131,14 @@ function Enemy::update()
 }
 
 
-function Enemy::changePosition(new_pos, new_angle)
+function Enemy::changePosition(new_pos, new_angle, visible)
 {
 	pos = new_pos;
 	angle = new_angle;
+	if (visible == 0)
+		alive = false;
+	else
+		alive = true;
 	SetRotation(angle);
 	obj.SetPosition(pos);
 }

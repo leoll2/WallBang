@@ -14,6 +14,7 @@
 #define SWAT_HEALTH_POINTS  10
 #define CHANGE_WEAPON_COOLDOWN  100
 #define N_BULLETS_PLAYER   (ROCKET_BULLETS + RAILGUN_BULLETS)
+#define RESPAWN_CD 			3500
 
 class Player {
 	
@@ -62,6 +63,7 @@ class Player {
 	var kills;
 	var deaths;
 	var killer;
+	var respawn_time; 
 	
 	// multiplayer
 	var network;
@@ -131,6 +133,7 @@ function Player::init(pos, dir, col, lvl, net)
 	kills = 0;
 	deaths = 0;
 	killer = null;
+	respawn_time = 0;
 	
 	obj = CVmObj();
 	obj.addchild(upper_obj);
@@ -145,7 +148,7 @@ function Player::init(pos, dir, col, lvl, net)
 	step_fx = CVmVRAWAV("step.wav");
 	jump_fx = CVmVRAWAV("jump.wav");
 	
-	var pos_pdu = network.craftPlayerPosPDU(position, angle_h);
+	var pos_pdu = network.craftPlayerPosPDU(position, angle_h, 1);
 	network.sendPDU(pos_pdu);
 }
 
@@ -322,12 +325,12 @@ function Player::respawn()
 	curr_weapon_idx = WEAP_ROCKET_TYPE;
 	change_weapon_cd = 0;
 	current_frame = SWAT_START_WALK;
-	
-	// TODO add respawn cooldown here or elsewhere
+
+	respawn_time = getTime() + RESPAWN_CD;
 	
 	obj.SetPosition(position);
 	
-	var pos_pdu = network.craftPlayerPosPDU(position, angle_h);
+	var pos_pdu = network.craftPlayerPosPDU(position, angle_h, 0);
 	network.sendPDU(pos_pdu);
 }
 
@@ -467,7 +470,7 @@ function Player::update()
 		change_weapon_cd -= 1;
 		
 	if (hasMoved()) {
-		var pos_pdu = network.craftPlayerPosPDU(position, angle_h);
+		var pos_pdu = network.craftPlayerPosPDU(position, angle_h, 1);
 		network.sendPDU(pos_pdu);
 	}
 		

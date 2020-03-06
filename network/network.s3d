@@ -29,7 +29,7 @@ class NetworkManager {
 	init(id);
 	updateInTrafficStats(time, size);
 	updateOutTrafficStats(time, size);
-	craftPlayerPosPDU(pos, angle);
+	craftPlayerPosPDU(pos, angle, visible);
 	craftBulletPosPDU(weap, bull_idx, pos, dir, life, uid);
 	craftHitPDU(hitter, weap, bull_idx);
 	craftKillPDU(killer);
@@ -81,9 +81,9 @@ function NetworkManager::updateOutTrafficStats(time, size)
 
 
 /* Create a PDU for updates about the player position 
- * [0]-typePDU, [1]-sender, [2,3,4]-posXYZ, [5]-angle
+ * [0]-typePDU, [1]-sender, [2,3,4]-posXYZ, [5]-angle, [6]-visible/hidden
  */
-function NetworkManager::craftPlayerPosPDU(pos, angle)
+function NetworkManager::craftPlayerPosPDU(pos, angle, visible)
 {
 	var pdu = vector(6);
 	
@@ -93,7 +93,8 @@ function NetworkManager::craftPlayerPosPDU(pos, angle)
 	pdu[3] = pos.y;
 	pdu[4] = pos.z;
 	pdu[5] = angle;
-	
+	pdu[6] = visible;
+
 	return pdu;
 }
 
