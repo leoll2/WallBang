@@ -1,0 +1,162 @@
+#ifndef GUI_S3D_
+#define GUI_S3D_
+
+#include <config.s3d>
+
+
+class GUI {
+	
+	var player;
+	var enemies;
+	
+	init();
+	setPlayer(pl);
+	setEnemies(en);
+	drawMenu();
+	drawHPBar(hp, max_hp);
+	drawHUD(t_respawn_left);
+	drawScoreBoard();
+};
+
+
+function GUI::init() {
+	/* Nothing to do! */
+}
+
+
+function GUI::setPlayer(pl) {
+	
+	player = pl;
+}
+
+
+function GUI::setEnemies(en) {
+	
+	enemies = en;
+}
+
+
+function GUI::drawMenu() {
+
+	ConsoleFont("Impact", 35);
+	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleText(0.4, 0.85, "WallBang");
+	ConsoleFont("Roboto", 20);
+	ConsoleText(0.35, 0.78, "Multiplayer FPS game");
+	
+	// Show instructions
+	ConsoleFont("Verdana", 12);
+	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleText(0.05, 0.35, "[W A S D]");
+	ConsoleText(0.05, 0.3,"[MouseL]");
+	ConsoleText(0.05, 0.25, "[C]");
+	ConsoleText(0.05, 0.2,"[Space]");
+	ConsoleText(0.05, 0.15, "[Shift]");
+	ConsoleText(0.05, 0.1, "[ESC]");
+	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleText(0.2, 0.35, "move");
+	ConsoleText(0.2, 0.3,"shoot");
+	ConsoleText(0.2, 0.25, "weapon");
+	ConsoleText(0.2, 0.2,"jump");
+	ConsoleText(0.2, 0.15, "run");
+	ConsoleText(0.2, 0.1,"quit");
+
+	ConsoleFont("Impact", 25);
+	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleText(0.25, 0.45, "Press SPACEBAR to start playing");
+}
+
+
+/* Draw the player health bar */
+function GUI::drawHPBar(hp, max_hp)
+{
+	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleFilledRect(0.05, 0.1, 0.15, 0.05);
+	ConsoleText(0.21, 0.06, "HP");
+	ConsoleColor(0, 0, 0);
+	ConsoleFilledRect(0.06, 0.09, 0.13, 0.03);
+	
+	if (1.0*hp/max_hp <= 0.25)
+		ConsoleColor(1, 0, 0);	// red
+	else if (1.0*hp/max_hp < 0.5)
+		ConsoleColor(1, 1, 0);  // yellow
+	else
+		ConsoleColor(1, 1, 1);  // white
+		
+	ConsoleFilledRect(0.06, 0.09, 0.13*hp/max_hp, 0.03);
+}
+
+
+/* Draw the HUD and secondary information */
+function GUI::drawHUD(t_respawn_left)
+{
+	// Show stats
+	ConsoleFont("Impact", 20);
+	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleText(0.05, 0.17, "Ammo: " + str(player.getRemainingShots()) + "/" + str(player.getMagazineSize()));
+	ConsoleText(0.05, 0.12, "K/D: " + str(player.kills) + "/" + str(player.deaths));
+	drawHPBar(player.getHP(), SWAT_HEALTH_POINTS);
+	
+	// Show notifications
+	if (player.isReloading()) {
+		ConsoleFont("Impact", 18);
+		ConsoleColor(1, 0.6, 0.2);
+		ConsoleText(0.45,0.9, "RELOADING");
+	}
+	
+	// Draw crosshair
+	var scope1 = [0.5, 0.48, 0.5, 0.52];
+	var scope2 = [0.485, 0.5, 0.515, 0.5];
+	ConsoleColor(1,0,0);
+	ConsoleWidth(3);
+	ConsoleLines(scope1);
+	ConsoleLines(scope2);
+	
+	// Show respawn interface
+	if (t_respawn_left >= 0) {
+		// Grey-out the background
+		ConsoleColor(0.5, 0.5, 0.5, 0.6);
+		ConsoleFilledRect(0, 1, 1, 1);
+		// Respawn time counter
+		ConsoleFont("Impact", 100);
+		ConsoleColor(0.4, 0.6, 1.0);
+		ConsoleText(0.45,0.5, str(t_respawn_left / 1000));
+	}
+}
+
+
+/* Draw the overlay scoreboard */
+function GUI::drawScoreBoard()
+{
+	var offset = 0;
+	// box
+	ConsoleColor(0.4, 0.6, 1.0);
+	ConsoleFilledRect(0.24, 0.76, 0.52, 0.52);
+	ConsoleColor(0.9, 0.9, 0.9);
+	ConsoleFilledRect(0.25, 0.75, 0.5, 0.5);
+	// header
+	ConsoleFont("Impact", 20);
+	ConsoleColor(0.0, 0.0, 0.0);
+	ConsoleText(0.3, 0.7, "Player ID");
+	ConsoleText(0.55, 0.7, "K");
+	ConsoleText(0.65, 0.7, "D");
+	// scores
+	ConsoleFont("Impact", 16);
+	for (var i=0; i<N_PLAYERS; i++) {
+		if (enemies[i].active) {
+			ConsoleColor(0.0, 0.0, 0.0);
+			ConsoleText(0.3, 0.62 - offset, str(i));
+			ConsoleText(0.55, 0.62 - offset, str(enemies[i].kills));
+			ConsoleText(0.65, 0.62 - offset, str(enemies[i].deaths));
+			offset += 0.05;
+		} else if (i == MY_PLAYER_ID) {
+			ConsoleColor(1.0, 0.0, 0.0);
+			ConsoleText(0.3, 0.62 - offset, str(i));
+			ConsoleText(0.55, 0.62 - offset, str(player.kills));
+			ConsoleText(0.65, 0.62 - offset, str(player.deaths));
+			offset += 0.05;
+		}
+	}
+}
+
+#endif

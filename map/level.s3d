@@ -1,5 +1,8 @@
 /* Class Level represents the map corresponding to a level of the game */
 
+#ifndef LEVEL_S3D_
+#define LEVEL_S3D_
+
 class Level
 {
 	// graphics
@@ -35,7 +38,7 @@ function Level::init(level_textfile)
 	trace(n_rows, n_cols);
 	
 	// Configure the walls visual parameters (e.g. textures)
-	wall_texture = CVmTexture("mattoni_1.png");
+	wall_texture = CVmTexture("bricks2_wall.jpg");
 	wall_material = CVmMaterial();
 	wall_material.SetTexture(wall_texture);
 	wall_material.ChangeTextureParams(VR_V_TILING, 3);
@@ -67,7 +70,7 @@ function Level::init(level_textfile)
 	}
 	
 	// Configure the floor visual parameters
-	floor_texture = CVMtexture("dirt.jpg");
+	floor_texture = CVMtexture("concrete_floor.jpg");
 	floor_material = CVmMaterial();
 	floor_material.SetTexture(floor_texture);
 	floor_material.ChangeTextureParams(VR_U_TILING, 4);
@@ -187,8 +190,10 @@ function Level::getNonWallDirection(pos)
 function Level::draw()
 {
 	foreach (var w in wall_obj_array)
-		w.Draw();
+	w.Draw();
 	wall_mesh.Draw();
 	floor_mesh.Draw();
 	sky_mesh.Draw();
 }
+
+#endif

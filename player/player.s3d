@@ -1,21 +1,10 @@
+#ifndef PLAYER_S3D_
+#define PLAYER_S3D_
+
+#include <config.s3d>
 #include <network/network.s3d>
 #include <weapons/weapon_class.s3d>
 
-#define TWO_PI 		6.283185
-
-#define SWAT_START_WALK     16
-#define SWAT_END_WALK       48
-#define SWAT_STEP           0.004
-#define SWAT_FRAME_STEP     0.5
-#define SWAT_TURN_RATE 	    0.01
-#define SWAT_BACKSTEP_SLOW  0.8
-#define SWAT_JUMP_SPEED     1.0
-#define SWAT_HITBOX_RADIUS  0.3
-#define SWAT_HEALTH_POINTS  10
-#define CHANGE_WEAPON_COOLDOWN  100
-#define N_BULLETS_PLAYER   (ROCKET_BULLETS + RAILGUN_BULLETS)
-#define RESPAWN_CD 			3500
-#define SWAT_POS_PDU_PERIOD 1000
 
 class Player {
 	
@@ -488,3 +477,5 @@ function Player::update()
 	prev_time = t;
 	//outputln("posX: " + str(position.x) + "  posY: " + str(position.y) + "  posZ: " + str(position.z));
 }
+
+#endif

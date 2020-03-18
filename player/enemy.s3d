@@ -1,3 +1,7 @@
+#ifndef ENEMY_S3D_
+#define ENEMY_S3D_
+
+
 class Enemy {
 	
 	var id;
@@ -207,3 +211,5 @@ function Enemy::tryIncrementDeaths(new_deaths)
 	if (new_deaths > deaths)
 		deaths = new_deaths;
 }
+
+#endif

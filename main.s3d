@@ -1,24 +1,11 @@
-/* Include s3d symbols */
 #include <Script3d.h>
 #include <Camera.s3d.h>
-
+#include <config.s3d>
+#include <interface/gui.s3d>
 #include <map/level.s3d>
 #include <network/network.s3d>
 #include <player/player.s3d>
 #include <player/enemy.s3d>
-
-
-#define MY_PLAYER_ID 	4
-
-#define CAM_GLOBAL    	0
-#define CAM_FPV 		1
-
-#define N_PLAYERS	 	8
-#define N_ENEMIES 		(N_PLAYERS-1)
-
-#define MAX_PDU_PER_TICK    10
-#define SCORE_PDU_PERIOD    1000
-#define PDU_LOSS_SIM_PERC 	30
 
 
 // Global scene parameters
@@ -49,6 +36,7 @@ var myNetwork;
 
 // Game
 var game_started;
+var myGUI;
 
 // Function declarations
 function initCamera(type, pos, dir);
@@ -60,130 +48,14 @@ function enterGame();
 /* Show the initial menu */
 function showMenu()
 {
-	ConsoleFont("Impact", 35);
-	ConsoleColor(0.4, 0.6, 1.0);
-	ConsoleText(0.4, 0.85, "WallBang");
-	ConsoleFont("Roboto", 20);
-	ConsoleText(0.35, 0.78, "Multiplayer FPS game");
+	// Draw the menu elements
+	myGUI.drawMenu();
 	
-	// Show instructions
-	ConsoleFont("Verdana", 12);
-	ConsoleColor(0.4, 0.6, 1.0);
-	ConsoleText(0.05, 0.35, "[W A S D]");
-	ConsoleText(0.05, 0.3,"[MouseL]");
-	ConsoleText(0.05, 0.25, "[C]");
-	ConsoleText(0.05, 0.2,"[Space]");
-	ConsoleText(0.05, 0.15, "[Shift]");
-	ConsoleText(0.05, 0.1, "[ESC]");
-	ConsoleColor(0.4, 0.6, 1.0);
-	ConsoleText(0.2, 0.35, "move");
-	ConsoleText(0.2, 0.3,"shoot");
-	ConsoleText(0.2, 0.25, "weapon");
-	ConsoleText(0.2, 0.2,"jump");
-	ConsoleText(0.2, 0.15, "run");
-	ConsoleText(0.2, 0.1,"quit");
-	
-	// Press spacebar
-	ConsoleFont("Impact", 25);
-	ConsoleColor(0.4, 0.6, 1.0);
-	ConsoleText(0.25, 0.45, "Press SPACEBAR to start playing");
+	// Spacebar to start
 	if (keypressed(VK_SPACE)) {
 		enterGame();
 	} else if (keypressed(VK_ESCAPE)) {
 		CVmWebBrowser().Quit();
-	}
-}
-
-
-/* Draw the player health bar */
-function drawHPBar(hp, max_hp)
-{
-	ConsoleColor(0.4, 0.6, 1.0);
-	ConsoleFilledRect(0.05, 0.1, 0.15, 0.05);
-	ConsoleText(0.21, 0.06, "HP");
-	ConsoleColor(0, 0, 0);
-	ConsoleFilledRect(0.06, 0.09, 0.13, 0.03);
-	
-	if (1.0*hp/max_hp <= 0.25)
-		ConsoleColor(1, 0, 0);	// red
-	else if (1.0*hp/max_hp < 0.5)
-		ConsoleColor(1, 1, 0);  // yellow
-	else
-		ConsoleColor(1, 1, 1);  // white
-		
-	ConsoleFilledRect(0.06, 0.09, 0.13*hp/max_hp, 0.03);
-}
-
-
-/* Draw the HUD and secondary information */
-function drawHUD(t_respawn_left)
-{
-	// Show stats
-	ConsoleFont("Impact", 20);
-	ConsoleColor(0.4, 0.6, 1.0);
-	ConsoleText(0.05, 0.17, "Ammo:    " + str(myPlayer.getRemainingShots()) + "/" + str(myPlayer.getMagazineSize()));
-	ConsoleText(0.05, 0.12, "K/D:  " + str(myPlayer.kills) + "/" + str(myPlayer.deaths));
-	drawHPBar(myPlayer.getHP(), SWAT_HEALTH_POINTS);
-	
-	// Show notifications
-	if (myPlayer.isReloading()) {
-		ConsoleFont("Impact", 18);
-		ConsoleColor(1, 0.6, 0.2);
-		ConsoleText(0.45,0.9, "RELOADING");
-	}
-	
-	// Draw crosshair
-	var scope1 = [0.5, 0.48, 0.5, 0.52];
-	var scope2 = [0.485, 0.5, 0.515, 0.5];
-	ConsoleColor(1,0,0);
-	ConsoleWidth(3);
-	ConsoleLines(scope1);
-	ConsoleLines(scope2);
-	
-	// Show respawn interface
-	if (t_respawn_left >= 0) {
-		// Grey-out the background
-		ConsoleColor(0.5, 0.5, 0.5, 0.6);
-		ConsoleFilledRect(0, 1, 1, 1);
-		// Respawn time counter
-		ConsoleFont("Impact", 100);
-		ConsoleColor(0.4, 0.6, 1.0);
-		ConsoleText(0.45,0.5, str(t_respawn_left / 1000));
-	}
-}
-
-
-/* Draw the overlay scoreboard */
-function drawScoreBoard()
-{
-	var offset = 0;
-	// box
-	ConsoleColor(0.4, 0.6, 1.0);
-	ConsoleFilledRect(0.24, 0.76, 0.52, 0.52);
-	ConsoleColor(0.9, 0.9, 0.9);
-	ConsoleFilledRect(0.25, 0.75, 0.5, 0.5);
-	// header
-	ConsoleFont("Impact", 20);
-	ConsoleColor(0.0, 0.0, 0.0);
-	ConsoleText(0.3, 0.7, "Player ID");
-	ConsoleText(0.55, 0.7, "K");
-	ConsoleText(0.65, 0.7, "D");
-	// scores
-	ConsoleFont("Impact", 16);
-	for (var i=0; i<N_PLAYERS; i++) {
-		if (enemies[i].active) {
-			ConsoleColor(0.0, 0.0, 0.0);
-			ConsoleText(0.3, 0.62 - offset, str(i));
-			ConsoleText(0.55, 0.62 - offset, str(enemies[i].kills));
-			ConsoleText(0.65, 0.62 - offset, str(enemies[i].deaths));
-			offset += 0.05;
-		} else if (i == MY_PLAYER_ID) {
-			ConsoleColor(1.0, 0.0, 0.0);
-			ConsoleText(0.3, 0.62 - offset, str(i));
-			ConsoleText(0.55, 0.62 - offset, str(myPlayer.kills));
-			ConsoleText(0.65, 0.62 - offset, str(myPlayer.deaths));
-			offset += 0.05;
-		}
 	}
 }
 
@@ -231,6 +103,9 @@ function enterGame()
 		enemies[i].init(i, false, [0,0,0], 0, 0, myPlayer, myLevel, myNetwork);
 	}
 	
+	myGUI.setPlayer(myPlayer);
+	myGUI.setEnemies(enemies);
+	
 	// Initialize camera
 	//initCamera(CAM_GLOBAL, globalCamDefaultPos, [0,0,-1]);
 	initCamera(CAM_FPV, myPlayer.getPosition() + [0,1.7,0], myPlayer.getDirection());
@@ -259,6 +134,8 @@ function OnDownload()
 function OnInit(params)
 {
 	game_started = false;
+	myGUI = GUI();
+	myGUI.init();
 }
 
 
@@ -305,9 +182,9 @@ function OnFrame()
 		if (t_respawn_left <= 0)
 			myPlayer.draw();
 		
-		drawHUD(t_respawn_left);
+		myGUI.drawHUD(t_respawn_left);
 		if (keypressed(VK_TAB)) {
-			drawScoreBoard();
+			myGUI.drawScoreBoard();
 		}
 		
 		ConsoleFinish();

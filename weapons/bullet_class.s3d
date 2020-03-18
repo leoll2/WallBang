@@ -1,14 +1,10 @@
 /* The class Bullet represents a projectile fired from a weapon */
 
-#include <network/network.s3d>
+#ifndef BULLET_S3D_
+#define BULLET_S3D_
 
-#define BULLET_LARGE_TYPE	0
-#define BULLET_SMALL_TYPE 	1
-#define BULLET_LARGE_SPEED 	0.02
-#define BULLET_SMALL_SPEED 	0.035
-#define BULLET_LARGE_SCALE	0.25
-#define BULLET_SMALL_SCALE 	0.1
-#define BULLET_LIFE 		100
+#include <config.s3d>
+#include <network/network.s3d>
 
 
 class Bullet 
@@ -128,3 +124,5 @@ function Bullet::draw()
 {
 	obj.Draw();
 }
+
+#endif
