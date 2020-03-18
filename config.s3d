@@ -16,7 +16,7 @@
 #define SWAT_END_WALK       48
 #define SWAT_STEP           0.004
 #define SWAT_FRAME_STEP     0.5
-#define SWAT_TURN_RATE 	    0.01
+#define SWAT_TURN_RATE      0.01
 #define SWAT_BACKSTEP_SLOW  0.8
 #define SWAT_JUMP_SPEED     1.0
 #define SWAT_HITBOX_RADIUS  0.3
